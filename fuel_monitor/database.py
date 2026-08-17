@@ -57,12 +57,8 @@ class Database:
     def upsert_station(self, station: dict) -> None:
         with self._connect() as conn:
             conn.execute("""
-                INSERT INTO stations (station_id, name, brand, address, town, county, latitude, longitude)
+                INSERT OR REPLACE INTO stations (station_id, name, brand, address, town, county, latitude, longitude)
                 VALUES (:station_id, :name, :brand, :address, :town, :county, :latitude, :longitude)
-                ON CONFLICT(station_id) DO UPDATE SET
-                    name=excluded.name, brand=excluded.brand, address=excluded.address,
-                    town=excluded.town, county=excluded.county,
-                    latitude=excluded.latitude, longitude=excluded.longitude
             """, station)
 
     def save_observation(self, station_id: str, fuel_type: str, price: float, observed_at: datetime) -> bool:
