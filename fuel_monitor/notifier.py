@@ -69,7 +69,9 @@ def format_message(
     dist = station.get("distance_km")
     dist_str = f"{dist:.1f} km" if dist is not None else "unknown distance"
 
-    price = analysis.get("current_price") or station.get("current_price", 0)
+    price = analysis.get("current_price")
+    if price is None:
+        price = station.get("current_price", 0)
     score = analysis.get("score")
     score_label = analysis.get("score_label", "")
     pct = analysis.get("percentile_30d")
@@ -105,13 +107,13 @@ def format_message(
 
     if forecasts:
         lines += ["", "Forecast:"]
-        for f in forecasts:
-            h = f["horizon_days"]
+        for fc in forecasts:
+            h = fc["horizon_days"]
             label = "Tomorrow" if h == 1 else f"{h} days"
-            lines += [f"  {label}:  €{f['expected']:.3f}  (€{f['low']:.3f}–€{f['high']:.3f})"]
+            lines += [f"  {label}:  €{fc['expected']:.3f}  (€{fc['low']:.3f}–€{fc['high']:.3f})"]
 
     if total_saving is not None:
-        lines += ["", f"Potential saving vs fill now:"]
+        lines += ["", "Potential saving vs fill now:"]
         lines += [f"  ~€{total_saving:.2f} on {typical_fill_litres:.0f}L"]
 
     lines += ["", f"{emoji} {action}", reason]
