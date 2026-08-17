@@ -114,14 +114,17 @@ def main() -> int:
         return 0
 
     # ------------------------------------------------------------------
-    # 6. Rank stations: score descending, distance ascending as tiebreaker
+    # 6. Rank stations: prefer score when available, otherwise lowest price,
+    #    then distance as tiebreaker
     # ------------------------------------------------------------------
-    def sort_key(r):
-        score = r["analysis"].get("score")
-        dist = r["station"]["distance_km"]
-        return (-(score if score is not None else -1), dist)
-
-    station_results.sort(key=sort_key)
+    station_results.sort(
+        key=lambda r: (
+            0 if r["analysis"].get("score") is not None else 1,
+            -(r["analysis"]["score"] or 0),
+            r["station"]["current_price"],
+            r["station"]["distance_km"],
+        )
+    )
     best = station_results[0]
 
     # ------------------------------------------------------------------
