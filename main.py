@@ -4,7 +4,6 @@ Fuel Monitor — entry point.
 Run: python main.py
 """
 import logging
-import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -181,7 +180,6 @@ def main() -> int:
     # 10. Notification — check score threshold + cooldown
     # ------------------------------------------------------------------
     score = a.get("score")
-    notification_sent = False
 
     if score is not None and score >= min_score:
         last_alert = db.get_last_alert(st["station_id"])
