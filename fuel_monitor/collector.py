@@ -48,6 +48,10 @@ def collect(lat: float, lng: float, radius_km: float) -> tuple[list[dict], list[
         logger.error("Pick A Pump response not valid JSON: %s", exc)
         return [], []
 
+    if not isinstance(data, list):
+        logger.error("Pick A Pump unexpected response shape: %s", type(data).__name__)
+        return [], []
+
     stations: list[dict] = []
     observations: list[dict] = []
     seen_station_ids: set[str] = set()
@@ -61,7 +65,7 @@ def collect(lat: float, lng: float, radius_km: float) -> tuple[list[dict], list[
         coords = s.get("coords") or {}
         lat_s = coords.get("lat")
         lng_s = coords.get("lng")
-        if not lat_s or not lng_s:
+        if lat_s is None or lng_s is None:
             continue
         # Ireland bounding box sanity check
         if not (51.3 <= lat_s <= 55.5 and -10.6 <= lng_s <= -5.4):
