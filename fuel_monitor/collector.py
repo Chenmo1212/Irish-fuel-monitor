@@ -19,7 +19,10 @@ FUEL_FIELD_MAP = [
 HEADERS = {
     "Accept": "application/json",
     "Origin": "https://pickapump.com",
-    "User-Agent": "Mozilla/5.0 (compatible; fuel-monitor/1.0)",
+    "Referer": "https://pickapump.com/",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "X-App-Version": "4.3.1",
+    "X-Platform": "web",
 }
 
 

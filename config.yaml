@@ -1,9 +1,13 @@
 location:
-  latitude: 53.27
-  longitude: -6.15
-  radius_km: 10
+  latitude: 53.2753
+  longitude: -6.203
+  radius_km: 20
 
 fuel:
+  # petrol = E10 (cheaper, most common)
+  # petrolplus = E5/98 (premium, higher octane)
+  # diesel = B7
+  # dieselplus = B7 Premium
   type: petrol
 
 vehicle:
