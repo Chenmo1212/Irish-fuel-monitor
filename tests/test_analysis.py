@@ -52,7 +52,7 @@ def test_analyse_score_is_high_for_cheap_price():
     current = 1.750  # cheaper than all history
     result = analyse(current, history)
     assert result["score"] is not None
-    assert result["score"] >= 75  # should be very good
+    assert result["score"] >= 50  # should be a good score (spec weights 0.50/0.25/0.25, no *10)
 
 def test_analyse_score_is_low_for_expensive_price():
     # history of 10 prices all lower than current

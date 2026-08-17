@@ -65,7 +65,7 @@ def analyse(current_price: float, history: list[dict]) -> dict:
         # Below-30d-avg component (same formula)
         below_30d = min(max((avg_30d - current_price) / avg_30d * 100, 0), 100)
 
-        score = 0.80 * pct_component + 0.10 * below_7d + 0.10 * below_30d
+        score = 0.50 * pct_component + 0.25 * below_7d + 0.25 * below_30d
         score = min(max(score, 0), 100)
 
         # Label
