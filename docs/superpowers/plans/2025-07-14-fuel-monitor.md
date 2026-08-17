@@ -139,7 +139,7 @@ pip install -r requirements.txt
 - [ ] **Step 11: Verify yaml loads**
 
 ```bash
-python -c "from fuel_monitor.config import load_config; c = load_config(); print(c['location'])"
+.venv/bin/python -c "from fuel_monitor.config import load_config; c = load_config(); print(c['location'])"
 ```
 
 Expected output: `{'latitude': 53.27, 'longitude': -6.15, 'radius_km': 10}`
@@ -261,7 +261,7 @@ def test_log_alert_and_get_last_alert(db):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/test_database.py -v
+.venv/bin/pytest tests/test_database.py -v
 ```
 
 Expected: ImportError or AttributeError — `Database` not yet defined.
@@ -375,7 +375,7 @@ class Database:
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/test_database.py -v
+.venv/bin/pytest tests/test_database.py -v
 ```
 
 Expected: all 7 tests PASS.
@@ -515,7 +515,7 @@ def collect(lat: float, lng: float, radius_km: float) -> tuple[list[dict], list[
 - [ ] **Step 2: Smoke-test the collector manually**
 
 ```bash
-python -c "
+.venv/bin/python -c "
 from fuel_monitor.collector import collect
 stations, obs = collect(53.27, -6.15, 5)
 print(f'Stations: {len(stations)}, Observations: {len(obs)}')
@@ -638,7 +638,7 @@ def test_haversine_km_same_point():
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/test_analysis.py -v
+.venv/bin/pytest tests/test_analysis.py -v
 ```
 
 Expected: ImportError — `analysis` module not yet defined.
@@ -761,7 +761,7 @@ def analyse(current_price: float, history: list[dict]) -> dict:
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/test_analysis.py -v
+.venv/bin/pytest tests/test_analysis.py -v
 ```
 
 Expected: all 9 tests PASS.
@@ -863,7 +863,7 @@ def test_forecast_detects_rising_trend():
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/test_predictor.py -v
+.venv/bin/pytest tests/test_predictor.py -v
 ```
 
 Expected: ImportError — `predictor` not yet defined.
@@ -957,7 +957,7 @@ def forecast(history: list[dict], horizons: list[int]) -> list[dict] | None:
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/test_predictor.py -v
+.venv/bin/pytest tests/test_predictor.py -v
 ```
 
 Expected: all 6 tests PASS.
@@ -1062,7 +1062,7 @@ def test_decide_falls_back_to_1day_if_no_3day_forecast():
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/test_decision.py -v
+.venv/bin/pytest tests/test_decision.py -v
 ```
 
 Expected: ImportError — `decision` not yet defined.
@@ -1133,7 +1133,7 @@ def decide(
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/test_decision.py -v
+.venv/bin/pytest tests/test_decision.py -v
 ```
 
 Expected: all 6 tests PASS.
@@ -1291,7 +1291,7 @@ def format_message(
 - [ ] **Step 2: Smoke-test the notifier format locally**
 
 ```bash
-python -c "
+.venv/bin/python -c "
 from fuel_monitor.notifier import format_message
 station = {'name': 'Circle K Sandyford', 'distance_km': 3.2, 'current_price': 1.689}
 analysis = {
@@ -1562,7 +1562,7 @@ if __name__ == "__main__":
 - [ ] **Step 2: Run end-to-end smoke test**
 
 ```bash
-python main.py
+.venv/bin/python main.py
 ```
 
 Expected: fetches real prices, prints summary, suppresses notification (score likely below threshold or no history). No unhandled exceptions.
@@ -1588,7 +1588,7 @@ git commit -m "feat: main orchestrator — end-to-end run"
 - [ ] **Step 1: Run full test suite**
 
 ```bash
-pytest tests/ -v
+.venv/bin/pytest tests/ -v
 ```
 
 Expected: all tests pass across `test_database.py`, `test_analysis.py`, `test_predictor.py`, `test_decision.py`.
@@ -1616,7 +1616,7 @@ cp .env.example .env
 ## Run
 
 ```bash
-python main.py
+.venv/bin/python main.py
 ```
 
 ## Schedule (cron — every 6 hours)
