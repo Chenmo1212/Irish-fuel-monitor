@@ -1,0 +1,26 @@
+location:
+  latitude: 53.27
+  longitude: -6.15
+  radius_km: 10
+
+fuel:
+  type: petrol
+
+vehicle:
+  typical_fill_litres: 40
+
+prediction:
+  horizons:
+    - 1
+    - 2
+    - 3
+    - 7
+
+alert:
+  minimum_score: 85
+  cooldown_hours: 24
+  significant_price_drop_cents: 1.0
+
+notification:
+  enabled: true
+  source: fuel-monitor
