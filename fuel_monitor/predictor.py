@@ -1,5 +1,5 @@
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import numpy as np
 
@@ -64,7 +64,8 @@ def forecast(history: list[dict], horizons: list[int]) -> list[dict] | None:
     slope = float(np.polyfit(x, recent, 1)[0])
 
     # Uncertainty: std of residuals from linear fit, minimum 0.005 €/L
-    fitted = np.polyval(np.polyfit(x, recent, 1), x)
+    coeffs = np.polyfit(x, recent, 1)
+    fitted = np.polyval(coeffs, x)
     residuals = np.array(recent) - fitted
     base_std = max(float(np.std(residuals)), 0.005)
 

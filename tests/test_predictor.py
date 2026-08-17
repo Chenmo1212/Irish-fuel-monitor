@@ -1,4 +1,3 @@
-import pytest
 from datetime import datetime, timedelta, timezone
 from fuel_monitor.predictor import forecast
 
