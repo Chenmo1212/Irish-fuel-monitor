@@ -16,8 +16,10 @@ class Database:
         return conn
 
     def init_schema(self) -> None:
+        # Use individual execute() calls so PRAGMA foreign_keys stays active
+        # (executescript issues an implicit COMMIT and resets session pragmas)
         with self._connect() as conn:
-            conn.executescript("""
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS stations (
                     station_id  TEXT PRIMARY KEY,
                     name        TEXT NOT NULL,
@@ -27,26 +29,29 @@ class Database:
                     county      TEXT,
                     latitude    REAL NOT NULL,
                     longitude   REAL NOT NULL
-                );
-
+                )
+            """)
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS price_history (
                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
                     station_id  TEXT NOT NULL REFERENCES stations(station_id),
                     fuel_type   TEXT NOT NULL,
                     price       REAL NOT NULL,
                     observed_at TEXT NOT NULL
-                );
-
+                )
+            """)
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_price_history_station_fuel
-                    ON price_history(station_id, fuel_type, observed_at);
-
+                    ON price_history(station_id, fuel_type, observed_at)
+            """)
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS alert_log (
                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
                     station_id  TEXT NOT NULL,
                     price       REAL NOT NULL,
                     score       REAL NOT NULL,
                     sent_at     TEXT NOT NULL
-                );
+                )
             """)
 
     def upsert_station(self, station: dict) -> None:
@@ -65,7 +70,7 @@ class Database:
         with self._connect() as conn:
             existing = conn.execute("""
                 SELECT 1 FROM price_history
-                WHERE station_id=? AND fuel_type=? AND price=? AND observed_at >= ?
+                WHERE station_id=? AND fuel_type=? AND ABS(price - ?) < 0.0001 AND observed_at > ?
                 LIMIT 1
             """, (station_id, fuel_type, price, cutoff)).fetchone()
             if existing:

@@ -1,4 +1,3 @@
-import os
 import pytest
 from datetime import datetime, timedelta, timezone
 from fuel_monitor.database import Database
@@ -58,6 +57,31 @@ def test_save_observation_different_price_always_saved(db):
     db.save_observation("ie-001", "E10", 1.799, now)
     saved = db.save_observation("ie-001", "E10", 1.789, now + timedelta(minutes=30))
     assert saved is True
+
+def test_save_observation_dedup_boundary_at_60min(db):
+    db.upsert_station({"station_id": "ie-001", "name": "Test", "brand": None,
+                       "address": "", "town": "", "county": "",
+                       "latitude": 53.0, "longitude": -6.0})
+    now = datetime.now(timezone.utc)
+    db.save_observation("ie-001", "E10", 1.799, now)
+    # Exactly 60 minutes later is outside the 60-min window — must be saved
+    saved = db.save_observation("ie-001", "E10", 1.799, now + timedelta(minutes=60))
+    assert saved is True
+
+def test_upsert_station_updates_on_conflict(db):
+    db.upsert_station({"station_id": "ie-001", "name": "Old Name", "brand": "Old Brand",
+                       "address": "", "town": "", "county": "",
+                       "latitude": 53.0, "longitude": -6.0})
+    db.upsert_station({"station_id": "ie-001", "name": "New Name", "brand": "New Brand",
+                       "address": "", "town": "", "county": "",
+                       "latitude": 53.1, "longitude": -6.1})
+    import sqlite3
+    conn = sqlite3.connect(db.db_path)
+    row = conn.execute("SELECT name, brand, latitude FROM stations WHERE station_id='ie-001'").fetchone()
+    conn.close()
+    assert row[0] == "New Name"
+    assert row[1] == "New Brand"
+    assert abs(row[2] - 53.1) < 0.001
 
 def test_get_price_history_filters_by_since(db):
     db.upsert_station({"station_id": "ie-001", "name": "Test", "brand": None,
