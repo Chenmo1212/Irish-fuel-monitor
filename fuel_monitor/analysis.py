@@ -80,14 +80,13 @@ def analyse(current_price: float, history: list[dict]) -> dict:
         else:
             score_label = "Very expensive"
 
-        # Human-readable reasons
-        if percentile_30d is not None:
-            pct_rank = round(percentile_30d)
-            score_reasons.append(
-                f"Current price is in the cheapest {100 - pct_rank}% of the last 30 days"
-                if pct_rank < 50
-                else f"Current price is in the most expensive {pct_rank}% of the last 30 days"
-            )
+        # Human-readable reasons (percentile_30d is guaranteed non-None here)
+        pct_rank = round(percentile_30d)
+        score_reasons.append(
+            f"Current price is in the cheapest {100 - pct_rank}% of the last 30 days"
+            if pct_rank < 50
+            else f"Current price is in the most expensive {pct_rank}% of the last 30 days"
+        )
         if avg_7d is not None:
             diff_c = (avg_7d - current_price) * 100
             if abs(diff_c) >= 0.1:
@@ -95,7 +94,8 @@ def analyse(current_price: float, history: list[dict]) -> dict:
                 score_reasons.append(f"{abs(diff_c):.1f}c/L {direction} the 7-day average")
         if low_30d is not None:
             diff_low_c = (current_price - low_30d) * 100
-            score_reasons.append(f"{diff_low_c:.1f}c/L above the 30-day low")
+            if abs(diff_low_c) >= 0.1:
+                score_reasons.append(f"{diff_low_c:.1f}c/L above the 30-day low")
 
     return {
         "obs_count": obs_count,
