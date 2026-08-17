@@ -202,7 +202,6 @@ def main() -> int:
             sent = send_notification(title, body, priority, notif_source, notif_enabled)
             if sent:
                 db.log_alert(st["station_id"], st["current_price"], score, datetime.now(timezone.utc))
-                notification_sent = True
                 print("\nNotification: sent ✓")
             else:
                 print("\nNotification: failed to send")
