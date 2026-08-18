@@ -236,6 +236,20 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     )
 
 
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "⛽ *FuelBot commands*\n\n"
+        "/start – Register or reset your preferences\n"
+        "/fuel – Change your fuel type\n"
+        "/location – Update your saved location\n"
+        "/check – Best nearby price now (saved location)\n"
+        "/check now – Share fresh location, then check\n"
+        "/status – View your current settings\n"
+        "/stop – Unregister and stop alerts",
+        parse_mode="Markdown",
+    )
+
+
 async def cmd_stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db: Database = context.bot_data["db"]
     chat_id = str(update.effective_chat.id)
@@ -291,6 +305,7 @@ def build_application(db: Database, token: str, admin_chat_id: str) -> Applicati
     )
 
     app.add_handler(conv)
+    app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("stop", cmd_stop))
     app.add_handler(CommandHandler("admin", cmd_admin))
