@@ -6,20 +6,67 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+def _send_telegram(title: str, body: str, maps_url: str | None = None) -> bool:
+    """
+    Send a message via the Telegram Bot API.
+    Requires TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID env vars.
+    If maps_url is provided, an inline "📍 Navigate" button is added.
+    Returns True on success, False on any failure. Never raises.
+    """
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+
+    if not token:
+        logger.error("TELEGRAM_BOT_TOKEN not set — cannot send Telegram notification.")
+        return False
+    if not chat_id:
+        logger.error("TELEGRAM_CHAT_ID not set — cannot send Telegram notification.")
+        return False
+
+    text = f"*{title}*\n\n{body}"
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "Markdown",
+    }
+    if maps_url:
+        payload["reply_markup"] = {
+            "inline_keyboard": [[{"text": "📍 Navigate", "url": maps_url}]]
+        }
+
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        if resp.ok:
+            logger.info("Telegram notification sent: %s", title)
+            return True
+        else:
+            logger.error("Telegram API returned HTTP %s: %s", resp.status_code, resp.text[:200])
+            return False
+    except requests.RequestException as exc:
+        logger.error("Telegram request failed: %s", exc)
+        return False
+
+
 def send_notification(
     title: str,
     body: str,
     priority: str,
     source: str,
     enabled: bool,
+    maps_url: str | None = None,
 ) -> bool:
     """
-    Send a notification via the personal API.
+    Send a notification via the configured channel.
+    Set notification.source to "telegram" in config.yaml to use Telegram.
     Returns True on success, False on any failure. Never raises.
     """
     if not enabled:
         logger.info("Notifications disabled — skipping send.")
         return False
+
+    if source == "telegram":
+        return _send_telegram(title, body, maps_url)
 
     api_url = os.environ.get("NOTIFICATION_API_URL", "").strip()
     if not api_url:
@@ -60,10 +107,11 @@ def format_message(
     forecasts: list[dict] | None,
     recommendation: dict,
     typical_fill_litres: float,
-) -> tuple[str, str]:
+) -> tuple[str, str, str | None]:
     """
     Format a Telegram-style notification message.
-    Returns (title, body).
+    Returns (title, body, maps_url).
+    maps_url is the Google Maps link for the station, or None if unavailable.
     """
     name = station.get("name", "Unknown station")
     dist = station.get("distance_km")
@@ -86,8 +134,12 @@ def format_message(
     emoji = "🟢" if action == "FILL NOW" else "🟡"
     title = f"⛽ Fuel Alert — {name}"
 
+    lat = station.get("latitude")
+    lng = station.get("longitude")
+    maps_link = f"https://www.google.com/maps?q={lat},{lng}" if lat is not None and lng is not None else None
+
     lines = ["⛽ Fuel Alert", ""]
-    lines += [f"Best station nearby:", f"{name} ({dist_str})", ""]
+    lines += ["Best station nearby:", f"{name} ({dist_str})", ""]
     lines += [f"Current price:   €{price:.3f}/L"]
     if score is not None:
         lines += [f"Fuel Score:      {score:.0f}/100  ({score_label})"]
@@ -118,4 +170,4 @@ def format_message(
 
     lines += ["", f"{emoji} {action}", reason]
 
-    return title, "\n".join(lines)
+    return title, "\n".join(lines), maps_link

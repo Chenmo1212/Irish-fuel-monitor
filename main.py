@@ -50,6 +50,7 @@ def main() -> int:
     sig_drop_cents = cfg["alert"]["significant_price_drop_cents"]
     notif_enabled = cfg["notification"]["enabled"]
     notif_source = cfg["notification"]["source"]
+    notif_test_mode = cfg["notification"].get("test_mode", False)
 
     # ------------------------------------------------------------------
     # 2. Database
@@ -184,7 +185,13 @@ def main() -> int:
     # ------------------------------------------------------------------
     score = a.get("score")
 
-    if score is not None and score >= min_score:
+    if notif_test_mode:
+        print("\n[TEST MODE] Bypassing score threshold and cooldown — forcing notification send.")
+        title, body, maps_url = format_message(st, a, forecasts, recommendation, typical_fill)
+        priority = "high" if recommendation["action"] == "FILL NOW" else "medium"
+        sent = send_notification(title, body, priority, notif_source, notif_enabled, maps_url)
+        print("\nNotification: sent ✓" if sent else "\nNotification: failed to send")
+    elif score is not None and score >= min_score:
         last_alert = db.get_last_alert(st["station_id"])
         should_send = True
 
@@ -200,9 +207,9 @@ def main() -> int:
                 print(f"\nNotification: suppressed (cooldown, {hours_since:.1f}h since last alert)")
 
         if should_send:
-            title, body = format_message(st, a, forecasts, recommendation, typical_fill)
+            title, body, maps_url = format_message(st, a, forecasts, recommendation, typical_fill)
             priority = "high" if recommendation["action"] == "FILL NOW" else "medium"
-            sent = send_notification(title, body, priority, notif_source, notif_enabled)
+            sent = send_notification(title, body, priority, notif_source, notif_enabled, maps_url)
             if sent:
                 db.log_alert(st["station_id"], st["current_price"], score, datetime.now(timezone.utc))
                 print("\nNotification: sent ✓")

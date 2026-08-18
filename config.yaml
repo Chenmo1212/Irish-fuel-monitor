@@ -21,10 +21,13 @@ prediction:
     - 7
 
 alert:
-  minimum_score: 85
+  minimum_score: 0
   cooldown_hours: 24
   significant_price_drop_cents: 1.0
 
 notification:
   enabled: true
-  source: fuel-monitor
+  # source options: "telegram" | "fuel-monitor" (custom HTTP API)
+  source: telegram
+  # test_mode: bypasses score threshold and cooldown — forces a notification send
+  test_mode: true
