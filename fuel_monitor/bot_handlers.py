@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from telegram import (
     Update,
@@ -61,6 +62,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     chat_id = str(update.effective_chat.id)
     db.upsert_user(chat_id, None, None, None)
     db.touch_user(chat_id)
+    # Flag that after fuel selection we also need a location
+    context.user_data["want_location"] = True
     await update.message.reply_text(
         "👋 Welcome to FuelBot!\n\nFirst, pick your fuel type:",
         reply_markup=_fuel_keyboard(),
@@ -69,20 +72,38 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def cb_fuel_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handles fuel-type button press in CHOOSING_FUEL state.
+
+    Routes differently depending on entry point:
+    - From /start (want_location=True): save pending fuel, prompt for location → WAITING_LOCATION
+    - From /fuel (want_location not set): update fuel directly, end conversation
+    """
     query = update.callback_query
     await query.answer()
     db: Database = context.bot_data["db"]
     chat_id = str(query.from_user.id)
     fuel_code = query.data.split(":")[1]  # e.g. "E10"
-    context.user_data["pending_fuel"] = fuel_code
     label = FUEL_LABELS.get(fuel_code, fuel_code)
-    await query.edit_message_text(f"Got it — {label}.\n\nNow share your location:")
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text="Tap the button below to share your location 👇",
-        reply_markup=_location_keyboard(),
-    )
-    return WAITING_LOCATION
+
+    if context.user_data.pop("want_location", False):
+        # /start flow — save fuel pending, then ask for location
+        context.user_data["pending_fuel"] = fuel_code
+        await query.edit_message_text(f"Got it — {label}.\n\nNow share your location:")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Tap the button below to share your location 👇",
+            reply_markup=_location_keyboard(),
+        )
+        return WAITING_LOCATION
+    else:
+        # /fuel flow — update fuel only, no location prompt
+        user = db.get_user(chat_id)
+        if user:
+            db.upsert_user(chat_id, fuel_code, user.get("latitude"), user.get("longitude"))
+            await query.edit_message_text(f"✅ Fuel type updated to {label}.")
+        else:
+            await query.edit_message_text("You're not registered yet. Use /start first.")
+        return ConversationHandler.END
 
 
 async def msg_location_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -116,25 +137,9 @@ async def cmd_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     db: Database = context.bot_data["db"]
     chat_id = str(update.effective_chat.id)
     db.touch_user(chat_id)
+    # Do NOT set want_location — fuel-only update, no location re-prompt
     await update.message.reply_text("Choose your fuel type:", reply_markup=_fuel_keyboard())
     return CHOOSING_FUEL
-
-
-async def cb_fuel_change(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Fuel selection when entered via /fuel — update fuel only, no location prompt."""
-    query = update.callback_query
-    await query.answer()
-    db: Database = context.bot_data["db"]
-    chat_id = str(query.from_user.id)
-    fuel_code = query.data.split(":")[1]
-    user = db.get_user(chat_id)
-    if user:
-        db.upsert_user(chat_id, fuel_code, user.get("latitude"), user.get("longitude"))
-        label = FUEL_LABELS.get(fuel_code, fuel_code)
-        await query.edit_message_text(f"✅ Fuel type updated to {label}.")
-    else:
-        await query.edit_message_text("You're not registered yet. Use /start first.")
-    return ConversationHandler.END
 
 
 async def cmd_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -173,16 +178,11 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ConversationHandler.END
 
     await update.message.reply_text("🔍 Checking prices near you…")
-    sent = sched.run_check_for_user(
-        user=user,
-        db=db,
-        token=token,
-        horizons=sched.HORIZONS,
-        typical_fill=sched.TYPICAL_FILL,
-        sig_drop_cents=sched.SIG_DROP_CENTS,
-        cooldown_hours=sched.COOLDOWN_HOURS,
-        min_score=sched.MIN_SCORE,
-        bypass_cooldown=True,
+    sent = await asyncio.to_thread(
+        sched.run_check_for_user,
+        user, db, token,
+        sched.HORIZONS, sched.TYPICAL_FILL, sched.SIG_DROP_CENTS,
+        sched.COOLDOWN_HOURS, sched.MIN_SCORE, True,
     )
     if not sent:
         await update.message.reply_text(
@@ -204,16 +204,11 @@ async def msg_location_check_now(update: Update, context: ContextTypes.DEFAULT_T
     # Use the fresh location without overwriting the saved one
     fresh_user = {**user, "latitude": loc.latitude, "longitude": loc.longitude}
     await update.message.reply_text("🔍 Checking prices near you…", reply_markup=ReplyKeyboardRemove())
-    sent = sched.run_check_for_user(
-        user=fresh_user,
-        db=db,
-        token=token,
-        horizons=sched.HORIZONS,
-        typical_fill=sched.TYPICAL_FILL,
-        sig_drop_cents=sched.SIG_DROP_CENTS,
-        cooldown_hours=sched.COOLDOWN_HOURS,
-        min_score=sched.MIN_SCORE,
-        bypass_cooldown=True,
+    sent = await asyncio.to_thread(
+        sched.run_check_for_user,
+        fresh_user, db, token,
+        sched.HORIZONS, sched.TYPICAL_FILL, sched.SIG_DROP_CENTS,
+        sched.COOLDOWN_HOURS, sched.MIN_SCORE, True,
     )
     if not sent:
         await update.message.reply_text(
