@@ -180,9 +180,10 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("🔍 Checking prices near you…")
     sent = await asyncio.to_thread(
         sched.run_check_for_user,
-        user, db, token,
-        sched.HORIZONS, sched.TYPICAL_FILL, sched.SIG_DROP_CENTS,
-        sched.COOLDOWN_HOURS, sched.MIN_SCORE, True,
+        user=user, db=db, token=token,
+        horizons=sched.HORIZONS, typical_fill=sched.TYPICAL_FILL,
+        sig_drop_cents=sched.SIG_DROP_CENTS, cooldown_hours=sched.COOLDOWN_HOURS,
+        min_score=sched.MIN_SCORE, bypass_cooldown=True,
     )
     if not sent:
         await update.message.reply_text(
@@ -206,9 +207,10 @@ async def msg_location_check_now(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text("🔍 Checking prices near you…", reply_markup=ReplyKeyboardRemove())
     sent = await asyncio.to_thread(
         sched.run_check_for_user,
-        fresh_user, db, token,
-        sched.HORIZONS, sched.TYPICAL_FILL, sched.SIG_DROP_CENTS,
-        sched.COOLDOWN_HOURS, sched.MIN_SCORE, True,
+        user=fresh_user, db=db, token=token,
+        horizons=sched.HORIZONS, typical_fill=sched.TYPICAL_FILL,
+        sig_drop_cents=sched.SIG_DROP_CENTS, cooldown_hours=sched.COOLDOWN_HOURS,
+        min_score=sched.MIN_SCORE, bypass_cooldown=True,
     )
     if not sent:
         await update.message.reply_text(
