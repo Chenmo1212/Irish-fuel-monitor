@@ -99,6 +99,8 @@ def run_check_for_user(
     a = best["analysis"]
     score = a.get("score")
 
+    # score is None means insufficient history — always let it through; cooldown gate
+    # only applies to scored results that fall below the threshold.
     if not bypass_cooldown and score is not None and score < min_score:
         logger.debug("User %s: score %.0f < min_score %.0f — suppressed", chat_id, score, min_score)
         return False

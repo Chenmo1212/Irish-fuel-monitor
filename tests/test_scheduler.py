@@ -1,8 +1,8 @@
 import pytest
 import tempfile
 import os
-from datetime import datetime, timezone, timedelta
-from unittest.mock import patch, MagicMock
+from datetime import datetime, timezone
+from unittest.mock import patch
 from fuel_monitor.database import Database
 from fuel_monitor.scheduler import run_check_for_user
 
