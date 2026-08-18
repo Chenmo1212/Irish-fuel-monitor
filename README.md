@@ -50,20 +50,6 @@ ADMIN_CHAT_ID=987654321          # your own chat ID — gates the /admin command
 
 > `TELEGRAM_CHAT_ID` and `NOTIFICATION_API_*` are only needed if you use the legacy `main.py` single-user mode. Leave them blank for the bot.
 
-#### Deploying on a China VPS (api.telegram.org is blocked)
-
-`api.telegram.org` is inaccessible from mainland China. Route requests through a Cloudflare Worker reverse proxy instead:
-
-1. Deploy a Worker using [Telegram-API-Proxy](https://github.com/4n0nymou3/Telegram-API-Proxy) — a ready-made Cloudflare Worker that restricts forwarding to `/bot<TOKEN>/...` only (not an open proxy).
-2. Copy the deployed Worker URL (e.g. `https://your-worker.workers.dev`).
-3. Add one line to your `.env`:
-
-```dotenv
-TELEGRAM_API_BASE=https://your-worker.workers.dev
-```
-
-That's it. All other config stays the same. The bot will call `https://your-worker.workers.dev/bot<TOKEN>/sendMessage` instead of `api.telegram.org`.
-
 ### 4. Configure location and preferences
 
 Edit [`config.yaml`](config.yaml):

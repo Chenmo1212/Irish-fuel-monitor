@@ -30,12 +30,8 @@ def send_telegram_to(
     """
     Send a Telegram message to an explicit chat_id using an explicit token.
     Returns True on success, False on any failure. Never raises.
-
-    Set TELEGRAM_API_BASE to a Cloudflare Worker URL (e.g. https://tg.example.com)
-    to route requests through a reverse proxy instead of api.telegram.org directly.
     """
-    base = os.environ.get("TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
-    url = f"{base}/bot{token}/sendMessage"
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = _build_telegram_payload(chat_id, title, body, maps_url)
     try:
         resp = requests.post(url, json=payload, timeout=10)
