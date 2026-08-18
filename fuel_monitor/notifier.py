@@ -6,26 +6,9 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-def _send_telegram(title: str, body: str, maps_url: str | None = None) -> bool:
-    """
-    Send a message via the Telegram Bot API.
-    Requires TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID env vars.
-    If maps_url is provided, an inline "📍 Navigate" button is added.
-    Returns True on success, False on any failure. Never raises.
-    """
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
-
-    if not token:
-        logger.error("TELEGRAM_BOT_TOKEN not set — cannot send Telegram notification.")
-        return False
-    if not chat_id:
-        logger.error("TELEGRAM_CHAT_ID not set — cannot send Telegram notification.")
-        return False
-
+def _build_telegram_payload(chat_id: str, title: str, body: str, maps_url: str | None) -> dict:
     text = f"*{title}*\n\n{body}"
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {
+    payload: dict = {
         "chat_id": chat_id,
         "text": text,
         "parse_mode": "Markdown",
@@ -34,18 +17,48 @@ def _send_telegram(title: str, body: str, maps_url: str | None = None) -> bool:
         payload["reply_markup"] = {
             "inline_keyboard": [[{"text": "📍 Navigate", "url": maps_url}]]
         }
+    return payload
 
+
+def send_telegram_to(
+    chat_id: str,
+    title: str,
+    body: str,
+    maps_url: str | None,
+    token: str,
+) -> bool:
+    """
+    Send a Telegram message to an explicit chat_id using an explicit token.
+    Returns True on success, False on any failure. Never raises.
+    """
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = _build_telegram_payload(chat_id, title, body, maps_url)
     try:
         resp = requests.post(url, json=payload, timeout=10)
         if resp.ok:
-            logger.info("Telegram notification sent: %s", title)
+            logger.info("Telegram notification sent to chat_id=%s: %s", chat_id, title)
             return True
-        else:
-            logger.error("Telegram API returned HTTP %s: %s", resp.status_code, resp.text[:200])
-            return False
+        logger.error("Telegram API HTTP %s: %s", resp.status_code, resp.text[:200])
+        return False
     except requests.RequestException as exc:
         logger.error("Telegram request failed: %s", exc)
         return False
+
+
+def _send_telegram(title: str, body: str, maps_url: str | None = None) -> bool:
+    """
+    Send via env vars TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID.
+    Backward-compat wrapper used by main.py.
+    """
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not token:
+        logger.error("TELEGRAM_BOT_TOKEN not set — cannot send Telegram notification.")
+        return False
+    if not chat_id:
+        logger.error("TELEGRAM_CHAT_ID not set — cannot send Telegram notification.")
+        return False
+    return send_telegram_to(chat_id, title, body, maps_url, token)
 
 
 def send_notification(
