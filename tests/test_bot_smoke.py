@@ -1,6 +1,5 @@
 import tempfile
 import os
-from pathlib import Path
 from fuel_monitor.database import Database
 from fuel_monitor.scheduler import run_scheduled_scan
 from fuel_monitor.bot_handlers import build_application
