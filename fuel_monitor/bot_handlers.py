@@ -262,7 +262,7 @@ async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         lng = u.get("longitude")
         loc = f"{lat:.3f},{lng:.3f}" if lat is not None else "no location"
         lines.append(
-            f"• {u['chat_id']} | {u.get('fuel_type','?')} | {loc} | since {u['registered_at'][:10]}"
+            f"• {u['chat_id']} | {u.get('fuel_type','?')} | {loc} | reg {u['registered_at'][:10]} | seen {u['last_seen_at'][:10]}"
         )
     await update.message.reply_text("\n".join(lines))
 
