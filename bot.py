@@ -53,9 +53,10 @@ def main() -> None:
 
     app = build_application(db, token, admin_chat_id)
     logger.info("FuelBot starting (polling mode)…")
-    app.run_polling(drop_pending_updates=True)
-
-    scheduler.shutdown()
+    try:
+        app.run_polling(drop_pending_updates=True)
+    finally:
+        scheduler.shutdown()
 
 
 if __name__ == "__main__":
