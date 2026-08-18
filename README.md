@@ -87,3 +87,68 @@ When choosing the "Best nearby station":
 2. Among scored stations, higher score wins.
 3. If score is unavailable, lower current price wins.
 4. Distance is only used as a tiebreaker.
+
+## Multi-User Telegram Bot
+
+Run `bot.py` to start the multi-user bot. Anyone on Telegram can self-register, set their fuel type, and receive automatic hourly alerts.
+
+### Setup
+
+1. Set environment variables in `.env`:
+
+```
+TELEGRAM_BOT_TOKEN=your-bot-token
+ADMIN_CHAT_ID=your-telegram-chat-id
+```
+
+2. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Start the bot:
+
+```bash
+python bot.py
+```
+
+### User commands
+
+| Command | What it does |
+|---------|-------------|
+| `/start` | Register and set fuel type + location |
+| `/fuel` | Change fuel type |
+| `/location` | Update saved location |
+| `/check` | Query best nearby station (uses saved location) |
+| `/check now` | Share fresh location, then query |
+| `/status` | View your current settings |
+| `/stop` | Unregister and stop alerts |
+
+### Running as a service (Linux/systemd)
+
+Create `/etc/systemd/system/fuelbot.service`:
+
+```ini
+[Unit]
+Description=FuelBot Telegram Bot
+After=network.target
+
+[Service]
+WorkingDirectory=/path/to/fuel-monitor
+ExecStart=/path/to/fuel-monitor/.venv/bin/python bot.py
+Restart=always
+RestartSec=10
+EnvironmentFile=/path/to/fuel-monitor/.env
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable and start:
+
+```bash
+sudo systemctl enable fuelbot
+sudo systemctl start fuelbot
+sudo systemctl status fuelbot
+```
