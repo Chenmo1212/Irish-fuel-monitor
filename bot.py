@@ -38,18 +38,19 @@ def main() -> None:
     db.init_schema()
     db.init_users_schema()
 
-    # Hourly background scan
+    # Background scan every 6 hours — oil prices change at most 1-2 times/day,
+    # and the 24 h per-user cooldown is the real anti-spam gate anyway.
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         run_scheduled_scan,
         trigger="interval",
-        hours=1,
+        hours=6,
         args=[db, token],
-        id="hourly_scan",
+        id="scheduled_scan",
         replace_existing=True,
     )
     scheduler.start()
-    logger.info("Hourly scheduler started")
+    logger.info("Scheduled scan started (every 6 h)")
 
     app = build_application(db, token, admin_chat_id)
     logger.info("FuelBot starting (polling mode)…")

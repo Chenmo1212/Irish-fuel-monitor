@@ -30,4 +30,4 @@ notification:
   # source options: "telegram" | "fuel-monitor" (custom HTTP API)
   source: telegram
   # test_mode: bypasses score threshold and cooldown — forces a notification send
-  test_mode: true
+  test_mode: false
