@@ -9,6 +9,12 @@ import base64
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from py_vapid import Vapid
 
+# Key format: raw base64url-encoded scalars (no padding) as expected by pywebpush webpush()
+# and the browser Web Push API applicationServerKey.
+# Private key: 32-byte raw P-256 scalar, base64url-encoded (43 chars)
+# Public key: 65-byte uncompressed P-256 point (0x04 + X + Y), base64url-encoded (87 chars)
+# VAPID_EMAIL should be stored as "mailto:you@example.com" (full URI) in .env.
+
 
 def main():
     v = Vapid()

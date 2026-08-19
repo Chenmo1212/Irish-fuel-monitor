@@ -124,7 +124,7 @@ def send_push(subscription_row: dict, title: str, body: str, url: str) -> bool:
             subscription_info=subscription_info,
             data=data,
             vapid_private_key=priv_key,
-            vapid_claims={"sub": f"mailto:{vapid_email}"},
+            vapid_claims={"sub": vapid_email if vapid_email.startswith(("mailto:", "https:")) else f"mailto:{vapid_email}"},
         )
         logger.info("Web Push sent to endpoint %s…", subscription_row["endpoint"][:40])
         return True

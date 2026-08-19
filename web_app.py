@@ -42,10 +42,7 @@ def main() -> None:
         logger.warning(
             "VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_EMAIL not set. "
             "Web Push notifications will be disabled. "
-            "Generate keys with: python -c \"from py_vapid import Vapid; "
-            "v = Vapid(); v.generate_keys(); "
-            "print('VAPID_PUBLIC_KEY=' + v.public_key.decode()); "
-            "print('VAPID_PRIVATE_KEY=' + v.private_key.decode())\""
+            "Generate keys with: python web/gen_vapid.py"
         )
 
     # Background scan every 6 hours

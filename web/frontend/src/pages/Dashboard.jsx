@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [fuel, setFuel] = useState(saved.fuel ?? 'E10')
   const [radius, setRadius] = useState(saved.radius ?? 20)
   const [best, setBest] = useState(null)
+  const [searched, setSearched] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -38,6 +39,7 @@ export default function Dashboard() {
     try {
       const stations = await getStations(lat, lng, radius, fuel)
       setBest(stations[0] || null)
+      setSearched(true)
       savePrefs({ lat: parseFloat(lat), lng: parseFloat(lng), fuel, radius })
     } catch (err) {
       setError(err.message)
@@ -82,7 +84,7 @@ export default function Dashboard() {
       </form>
       {error && <p style={{ color: '#dc2626', fontSize: 13 }}>{error}</p>}
       {best && <PriceCard station={best} />}
-      {best === null && !loading && !error && (
+      {searched && best === null && !loading && !error && (
         <p style={{ color: '#6b7280', fontSize: 13 }}>No stations found nearby.</p>
       )}
     </div>
