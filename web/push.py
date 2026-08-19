@@ -95,8 +95,7 @@ def send_push(subscription_row: dict, title: str, body: str, url: str) -> bool:
     """
     Send a Web Push notification to one subscription.
     Returns True on success, False on failure.
-    Deletes the DB row on HTTP 410 (Gone) — caller handles row removal.
-    Raises PushGoneError if the endpoint is expired (410).
+    Raises _PushGoneError if the endpoint is expired (410 Gone) — caller handles row removal.
     """
     from pywebpush import webpush, WebPushException
     import json
