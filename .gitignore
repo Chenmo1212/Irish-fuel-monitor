@@ -11,3 +11,5 @@ build/
 venv/
 logs/
 *.log
+web/static/
+web/frontend/node_modules/
