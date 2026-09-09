@@ -163,23 +163,6 @@ launchctl load ~/Library/LaunchAgents/com.fuelbot.plist
 
 ---
 
-## Single-user CLI mode (`main.py`)
-
-If you don't want the bot and just want a script you run manually or via cron:
-
-```bash
-# requires TELEGRAM_CHAT_ID (or NOTIFICATION_API_URL) in .env
-python main.py
-```
-
-Cron example (every 6 hours):
-
-```cron
-0 */6 * * * cd /path/to/fuel-monitor && .venv/bin/python main.py >> logs/fuel.log 2>&1
-```
-
----
-
 ## Scoring explained
 
 Each station price gets a `score` (0–100) measuring how good it is relative to **that station's own recent history** — not a global average.
@@ -239,65 +222,3 @@ SQLite database at `data/fuel.db` (created automatically on first run). Stores s
 ```bash
 pytest
 ```
-
-## Web App
-
-A browser-based interface for viewing fuel prices, nearby stations, price history, and managing Web Push alerts.
-
-### Quick start
-
-**1. Install additional Python dependencies**
-
-```bash
-pip install -r requirements.txt
-```
-
-**2. Generate VAPID keys (one-time)**
-
-```bash
-python web/gen_vapid.py
-```
-
-Paste the output into your `.env` file.
-
-**3. Build the frontend**
-
-```bash
-cd web/frontend
-npm install
-npm run build
-cd ../..
-```
-
-**4. Start the web app**
-
-```bash
-python web_app.py
-```
-
-Open http://127.0.0.1:5000
-
-### Development mode
-
-```bash
-# Terminal 1 — Flask API
-python web_app.py
-
-# Terminal 2 — Vite dev server with hot reload
-cd web/frontend
-npm run dev
-# Open http://localhost:5173
-```
-
-### Production (gunicorn)
-
-```bash
-gunicorn "web.app:create_app()" --bind 127.0.0.1:5000 --workers 2
-```
-
-### Web Push flow
-
-1. Open **Settings**, enter petrol/diesel target prices.
-2. Click **Enable notifications** — browser asks for permission.
-3. The server checks prices every 6 hours. If any nearby station price ≤ your target, a push notification is sent to your browser.
-4. Click **Disable notifications** to unsubscribe.

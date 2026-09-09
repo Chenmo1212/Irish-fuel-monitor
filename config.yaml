@@ -24,10 +24,3 @@ alert:
   minimum_score: 0
   cooldown_hours: 24
   significant_price_drop_cents: 1.0
-
-notification:
-  enabled: true
-  # source options: "telegram" | "fuel-monitor" (custom HTTP API)
-  source: telegram
-  # test_mode: bypasses score threshold and cooldown — forces a notification send
-  test_mode: false
