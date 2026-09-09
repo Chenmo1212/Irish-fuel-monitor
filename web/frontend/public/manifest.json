@@ -1,9 +1,0 @@
-{
-  "name": "FuelBot Ireland",
-  "short_name": "FuelBot",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#16a34a",
-  "icons": []
-}
