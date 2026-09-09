@@ -1,5 +1,5 @@
 from unittest.mock import patch, MagicMock
-from fuel_monitor.notifier import send_telegram_to, _send_telegram
+from fuel_monitor.notifier import send_telegram_to
 
 
 def _mock_ok():
@@ -55,14 +55,3 @@ def test_send_telegram_to_with_maps_url():
         )
     payload = mock_post.call_args[1]["json"]
     assert "reply_markup" in payload
-
-
-def test_send_telegram_backward_compat_uses_env(monkeypatch):
-    """_send_telegram with no explicit params still reads from env vars."""
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "env-token")
-    monkeypatch.setenv("TELEGRAM_CHAT_ID", "env-chat")
-    with patch("fuel_monitor.notifier.requests.post", return_value=_mock_ok()) as mock_post:
-        result = _send_telegram("T", "B")
-    assert result is True
-    url = mock_post.call_args[0][0]
-    assert "env-token" in url

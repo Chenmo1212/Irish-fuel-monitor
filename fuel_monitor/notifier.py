@@ -1,5 +1,4 @@
 import logging
-import os
 
 import requests
 
@@ -42,75 +41,6 @@ def send_telegram_to(
         return False
     except requests.RequestException as exc:
         logger.error("Telegram request failed: %s", exc)
-        return False
-
-
-def _send_telegram(title: str, body: str, maps_url: str | None = None) -> bool:
-    """
-    Send via env vars TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID.
-    Backward-compat wrapper used by main.py.
-    """
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
-    if not token:
-        logger.error("TELEGRAM_BOT_TOKEN not set — cannot send Telegram notification.")
-        return False
-    if not chat_id:
-        logger.error("TELEGRAM_CHAT_ID not set — cannot send Telegram notification.")
-        return False
-    return send_telegram_to(chat_id, title, body, maps_url, token)
-
-
-def send_notification(
-    title: str,
-    body: str,
-    priority: str,
-    source: str,
-    enabled: bool,
-    maps_url: str | None = None,
-) -> bool:
-    """
-    Send a notification via the configured channel.
-    Set notification.source to "telegram" in config.yaml to use Telegram.
-    Returns True on success, False on any failure. Never raises.
-    """
-    if not enabled:
-        logger.info("Notifications disabled — skipping send.")
-        return False
-
-    if source == "telegram":
-        return _send_telegram(title, body, maps_url)
-
-    api_url = os.environ.get("NOTIFICATION_API_URL", "").strip()
-    if not api_url:
-        logger.error("NOTIFICATION_API_URL not set — cannot send notification.")
-        return False
-
-    headers = {"Content-Type": "application/json"}
-    api_key = os.environ.get("NOTIFICATION_API_KEY", "").strip()
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
-    payload = {
-        "type": "notification",
-        "source": source,
-        "metadata": {
-            "title": title,
-            "content": body,
-            "priority": priority,
-        },
-    }
-
-    try:
-        resp = requests.post(api_url, json=payload, headers=headers, timeout=10)
-        if resp.ok:
-            logger.info("Notification sent: %s", title)
-            return True
-        else:
-            logger.error("Notification API returned HTTP %s: %s", resp.status_code, resp.text[:200])
-            return False
-    except requests.RequestException as exc:
-        logger.error("Notification request failed: %s", exc)
         return False
 
 
