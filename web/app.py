@@ -133,9 +133,9 @@ def create_app(db_path: str | None = None) -> Flask:
 
         results.sort(
             key=lambda r: (
+                r["current_price"],
                 0 if r["score"] is not None else 1,
                 -(r["score"] or 0),
-                r["current_price"],
                 r["distance_km"],
             )
         )
