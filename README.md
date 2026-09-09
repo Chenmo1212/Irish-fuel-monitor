@@ -161,6 +161,59 @@ Create `~/Library/LaunchAgents/com.fuelbot.plist`:
 launchctl load ~/Library/LaunchAgents/com.fuelbot.plist
 ```
 
+### Docker / Fly.io (PaaS - Cloud Serverless VM)
+
+If you don't have a physical server/VPS and want to host the bot in the cloud 24/7 for **free**, [Fly.io](https://fly.io) is an excellent choice. It compiles the project into a Docker container and runs it on a tiny micro-VM with a persistent SSD.
+
+#### What are all these files?
+* **`Dockerfile`**: Tells Fly.io how to build a virtual system (container) with Python 3.11, install dependencies, copy files, and start `bot.py`.
+* **`.dockerignore`**: Like `.gitignore`, it tells Fly.io what files to **skip** uploading (like local test databases, virtual environments `venv`, etc.) to speed up deployment.
+* **`fly.toml`**: The main configuration file for Fly.io. It defines the app name, region, and maps a persistent disk so your SQLite database (`fuel.db`) is not deleted when the app restarts.
+
+#### Complete Step-by-Step Deployment
+
+1. **Install Flyctl (the Fly.io CLI)**:
+   * **macOS**: `brew install flyctl`
+   * **Linux/Windows**: See [Fly.io installation guide](https://fly.io/docs/hands-on/install-flyctl/).
+   * Login/Register: `fly auth login`
+
+2. **Initialize the app**:
+   Create the application in Fly.io. Run this from the root directory:
+   ```bash
+   fly apps create fuel-monitor-bot
+   ```
+   *Note: Application names must be unique. If `fuel-monitor-bot` is taken, open `fly.toml` and change `app = "your-unique-name"` before proceeding.*
+
+3. **Check your available regions**:
+   Fly.io might have different regions available based on your account. Find the active ones:
+   ```bash
+   fly platform regions
+   ```
+   *If you want to change the region from Singapore (`sin`), edit `primary_region = "your-region"` in `fly.toml`.*
+
+4. **Create a persistent database disk (Volume)**:
+   Your SQLite database is a local file. To keep your database from being wiped out every time the bot updates/restarts, create a 1GB cloud volume (disk) in your chosen region (e.g., `sin`):
+   ```bash
+   fly volumes create fuel_data --region sin --size 1
+   ```
+   *The `--region` must match the `primary_region` in your `fly.toml`.*
+
+5. **Set up secrets (environment variables)**:
+   Since we don't upload the `.env` file for safety, we inject the credentials into Fly.io secure secrets:
+   ```bash
+   fly secrets set TELEGRAM_BOT_TOKEN="your-bot-token" ADMIN_CHAT_ID="your-chat-id"
+   ```
+
+6. **Deploy**:
+   ```bash
+   fly deploy
+   ```
+
+7. **Useful operations**:
+   * **Check Logs (troubleshooting)**: `fly logs` (shows real-time console print statements and errors)
+   * **Restart bot**: `fly apps restart`
+   * **Check disk/volume**: `fly volumes list`
+
 ---
 
 ## Scoring explained

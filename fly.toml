@@ -1,0 +1,14 @@
+# fly.toml app configuration file generated for fuel-monitor-bot
+
+app = "fuel-monitor-bot"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deployment]
+  strategy = "recreate"
+
+[mounts]
+  source = "fuel_data"
+  destination = "/app/data"
