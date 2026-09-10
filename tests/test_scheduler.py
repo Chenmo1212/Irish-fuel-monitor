@@ -220,3 +220,64 @@ def test_run_check_scheduled_no_alternatives(db):
 
     assert sent is True
     assert mock_fmt.call_args.kwargs["alternatives"] is None
+
+
+def test_automatic_alert_sent_for_meaningful_price_increase(db):
+    """Scheduled scan notifies when forecast predicts a meaningful price rise (FILL NOW)."""
+    user = _make_user()
+    # Current price 1.799 EUR/L; forecast 2.850 EUR/L — rise of ~1.05 EUR/L exceeds threshold
+    # decide() returns action="FILL NOW" (price expected to rise)
+    rising_forecast = [{"horizon_days": 3, "expected": 2.850, "low": 2.83, "high": 2.87}]
+    with (
+        patch("fuel_monitor.scheduler.collect", side_effect=_fake_collect),
+        patch("fuel_monitor.scheduler.forecast", return_value=rising_forecast),
+        patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as mock_send,
+    ):
+        # bypass_cooldown=False → automatic scheduled scan path
+        sent = run_check_for_user(
+            user=user, db=db, token="tok",
+            horizons=[1, 3, 7], typical_fill=40.0,
+            sig_drop_cents=1.0, cooldown_hours=24.0,
+            min_score=0.0, bypass_cooldown=False,
+        )
+    assert sent is True
+    assert mock_send.called
+
+
+def test_automatic_alert_suppressed_for_predicted_price_drop(db):
+    """Scheduled scan does NOT notify when forecast predicts a significant price drop (WAIT)."""
+    user = _make_user()
+    # Current price 1.799 EUR/L; forecast 0.750 EUR/L — drop of ~1.05 EUR/L exceeds threshold
+    # decide() returns action="WAIT" — user should wait, no automatic alert needed
+    dropping_forecast = [{"horizon_days": 3, "expected": 0.750, "low": 0.73, "high": 0.77}]
+    with (
+        patch("fuel_monitor.scheduler.collect", side_effect=_fake_collect),
+        patch("fuel_monitor.scheduler.forecast", return_value=dropping_forecast),
+        patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as mock_send,
+    ):
+        sent = run_check_for_user(
+            user=user, db=db, token="tok",
+            horizons=[1, 3, 7], typical_fill=40.0,
+            sig_drop_cents=1.0, cooldown_hours=24.0,
+            min_score=0.0, bypass_cooldown=False,
+        )
+    assert sent is False
+    assert not mock_send.called
+
+
+def test_automatic_alert_suppressed_when_score_below_minimum(db):
+    """Scheduled scan does NOT notify when station score is below configured min_score."""
+    user = _make_user()
+    with (
+        patch("fuel_monitor.scheduler.collect", side_effect=_fake_collect),
+        patch("fuel_monitor.scheduler.analyse", return_value={"score": 30.0, "current_price": 179.9}),
+        patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as mock_send,
+    ):
+        sent = run_check_for_user(
+            user=user, db=db, token="tok",
+            horizons=[1, 3, 7], typical_fill=40.0,
+            sig_drop_cents=1.0, cooldown_hours=24.0,
+            min_score=70.0, bypass_cooldown=False,
+        )
+    assert sent is False
+    assert not mock_send.called

@@ -118,6 +118,11 @@ def run_check_for_user(
 
     forecasts = forecast(best["history"], horizons)
     recommendation = decide(st["current_price"], forecasts, typical_fill, sig_drop_cents)
+
+    if not bypass_cooldown and recommendation["action"] != "FILL NOW":
+        logger.debug("User %s: recommendation is %s — suppressed", chat_id, recommendation["action"])
+        return False
+
     alternatives = [item["station"] for item in station_results[1:4]] if show_alternatives else None
     title, body, maps_url = format_message(st, a, forecasts, recommendation, typical_fill, alternatives=alternatives)
 

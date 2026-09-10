@@ -244,12 +244,23 @@ Predictions improve noticeably after ~7 days of data collection.
 
 ### Station ranking
 
-When multiple stations are nearby:
+Stations are ranked by **current price first, then distance**. Historical score is additional context shown in the alert, not the primary ranking criterion.
 
-1. Stations **with** a score rank above those without.
-2. Among scored stations, **higher score wins**.
-3. Without a score, **lower price wins**.
-4. Distance is a tiebreaker only.
+When multiple stations share the same price, the closer one ranks higher.
+
+### Forecast-based alerts
+
+The scheduler runs a background scan and sends an alert only when the forecast recommends filling now:
+
+- **Meaningful predicted price increase** — forecast shows the price is expected to rise beyond the configured threshold → "FILL NOW" alert is sent.
+- **Predicted price drop** — forecast shows the price is expected to fall → recommendation is "WAIT" → no automatic alert (filling now would be wasteful).
+- **No forecast available** — insufficient history → alert is sent (safe default: fill at the current price).
+
+Manual `/check` always returns the current cheapest station and up to three nearby alternatives regardless of the forecast recommendation.
+
+### Alternatives in `/check`
+
+A `/check` response includes the best station plus up to three other nearby options with current price and distance, so you can compare before deciding where to fill up.
 
 ---
 
