@@ -98,3 +98,22 @@ def test_format_message_no_other_options_when_alternatives_none():
         typical_fill_litres=40.0,
     )
     assert "Other options" not in body
+
+
+def test_format_message_no_saving_section_for_negative_total_saving():
+    """Forecast-rise FILL NOW: predicted_total_saving is negative — section must not appear."""
+    title, body, maps_url = format_message(
+        station={"name": "Best", "distance_km": 1.0, "current_price": 180.0, "latitude": 53.3, "longitude": -6.2},
+        analysis={"current_price": 180.0, "score": None},
+        forecasts=[{"horizon_days": 3, "expected": 183.0, "low": 181.0, "high": 185.0}],
+        recommendation={
+            "action": "FILL NOW",
+            "reason": "Price expected to rise by 3.0c/L in ~3 days — fill now to avoid ~€1.20 increase on 40L",
+            "predicted_saving_per_litre": -3.0,
+            "predicted_total_saving": -1.20,
+            "forecast_used": {"horizon_days": 3, "expected": 183.0},
+        },
+        typical_fill_litres=40.0,
+    )
+    assert "Potential saving" not in body
+    assert "FILL NOW" in body

@@ -108,7 +108,7 @@ def format_message(
             label = "Tomorrow" if h == 1 else f"{h} days"
             lines += [f"  {label}:  {fc['expected']:.1f}c  ({fc['low']:.1f}c–{fc['high']:.1f}c)"]
 
-    if total_saving is not None:
+    if total_saving is not None and total_saving > 0:
         lines += ["", "Potential saving vs fill now:"]
         lines += [f"  ~€{total_saving:.2f} on {typical_fill_litres:.0f}L"]
 
