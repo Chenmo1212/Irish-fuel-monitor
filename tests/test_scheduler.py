@@ -39,7 +39,7 @@ def _fake_collect(lat, lng, radius_km):
         "latitude": lat + 0.01,
         "longitude": lng + 0.01,
     }
-    obs = [{"station_id": "s1", "fuel_type": "E10", "price": 1.799, "observed_at": datetime.now(timezone.utc)}]
+    obs = [{"station_id": "s1", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)}]
     return [station], obs
 
 
@@ -79,7 +79,7 @@ def test_run_check_skips_wrong_fuel_type(db):
 def test_run_check_respects_cooldown(db):
     user = _make_user()
     # Log a recent alert for station s1
-    db.log_user_alert("test-chat", "s1", 1.799, 60.0, datetime.now(timezone.utc))
+    db.log_user_alert("test-chat", "s1", 179.9, 60.0, datetime.now(timezone.utc))
 
     with (
         patch("fuel_monitor.scheduler.collect", side_effect=_fake_collect),
@@ -97,7 +97,7 @@ def test_run_check_respects_cooldown(db):
 
 def test_run_check_bypass_cooldown(db):
     user = _make_user()
-    db.log_user_alert("test-chat", "s1", 1.799, 60.0, datetime.now(timezone.utc))
+    db.log_user_alert("test-chat", "s1", 179.9, 60.0, datetime.now(timezone.utc))
 
     with (
         patch("fuel_monitor.scheduler.collect", side_effect=_fake_collect),
@@ -225,9 +225,9 @@ def test_run_check_scheduled_no_alternatives(db):
 def test_automatic_alert_sent_for_meaningful_price_increase(db):
     """Scheduled scan notifies when forecast predicts a meaningful price rise (FILL NOW)."""
     user = _make_user()
-    # Current price 1.799 EUR/L; forecast 2.850 EUR/L — rise of ~1.05 EUR/L exceeds threshold
+    # Current price 179.9 c/L; forecast 285.0 c/L — rise of 105.1 c/L exceeds threshold
     # decide() returns action="FILL NOW" (price expected to rise)
-    rising_forecast = [{"horizon_days": 3, "expected": 2.850, "low": 2.83, "high": 2.87}]
+    rising_forecast = [{"horizon_days": 3, "expected": 285.0, "low": 283.0, "high": 287.0}]
     with (
         patch("fuel_monitor.scheduler.collect", side_effect=_fake_collect),
         patch("fuel_monitor.scheduler.forecast", return_value=rising_forecast),
@@ -247,9 +247,9 @@ def test_automatic_alert_sent_for_meaningful_price_increase(db):
 def test_automatic_alert_suppressed_for_predicted_price_drop(db):
     """Scheduled scan does NOT notify when forecast predicts a significant price drop (WAIT)."""
     user = _make_user()
-    # Current price 1.799 EUR/L; forecast 0.750 EUR/L — drop of ~1.05 EUR/L exceeds threshold
+    # Current price 179.9 c/L; forecast 75.0 c/L — drop of 104.9 c/L exceeds threshold
     # decide() returns action="WAIT" — user should wait, no automatic alert needed
-    dropping_forecast = [{"horizon_days": 3, "expected": 0.750, "low": 0.73, "high": 0.77}]
+    dropping_forecast = [{"horizon_days": 3, "expected": 75.0, "low": 73.0, "high": 77.0}]
     with (
         patch("fuel_monitor.scheduler.collect", side_effect=_fake_collect),
         patch("fuel_monitor.scheduler.forecast", return_value=dropping_forecast),
@@ -281,3 +281,24 @@ def test_automatic_alert_suppressed_when_score_below_minimum(db):
         )
     assert sent is False
     assert not mock_send.called
+
+
+def test_automatic_alert_sent_for_negligible_forecast_change(db):
+    """Scheduled scan sends alert when forecast change is negligible (FILL NOW — small change)."""
+    user = _make_user()
+    # Current price 179.9 c/L; forecast 180.5 c/L — change of 0.6 c/L is below threshold (1.0)
+    # decide() returns action="FILL NOW" (predicted change is small — good price now)
+    flat_forecast = [{"horizon_days": 3, "expected": 180.5, "low": 179.5, "high": 181.5}]
+    with (
+        patch("fuel_monitor.scheduler.collect", side_effect=_fake_collect),
+        patch("fuel_monitor.scheduler.forecast", return_value=flat_forecast),
+        patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as mock_send,
+    ):
+        sent = run_check_for_user(
+            user=user, db=db, token="tok",
+            horizons=[1, 3, 7], typical_fill=40.0,
+            sig_drop_cents=1.0, cooldown_hours=24.0,
+            min_score=0.0, bypass_cooldown=False,
+        )
+    assert sent is True
+    assert mock_send.called
