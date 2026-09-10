@@ -23,7 +23,7 @@ def analyse(current_price: float, history: list[dict]) -> dict:
     Compute analysis statistics for a single station + fuel type.
 
     Args:
-        current_price: current price in EUR/L
+        current_price: current price in euro cents/L (e.g. 189.9)
         history: list of {"price": float, "observed_at": str ISO 8601} dicts
                  covering at least the last 30 days (caller's responsibility)
 
@@ -88,12 +88,12 @@ def analyse(current_price: float, history: list[dict]) -> dict:
             else f"Current price is in the most expensive {pct_rank}% of the last 30 days"
         )
         if avg_7d is not None:
-            diff_c = (avg_7d - current_price) * 100
+            diff_c = avg_7d - current_price  # already in cents
             if abs(diff_c) >= 0.1:
                 direction = "below" if diff_c > 0 else "above"
                 score_reasons.append(f"{abs(diff_c):.1f}c/L {direction} the 7-day average")
         if low_30d is not None:
-            diff_low_c = (current_price - low_30d) * 100
+            diff_low_c = current_price - low_30d  # already in cents
             if abs(diff_low_c) >= 0.1:
                 score_reasons.append(f"{diff_low_c:.1f}c/L above the 30-day low")
 

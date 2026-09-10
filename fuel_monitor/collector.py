@@ -96,13 +96,12 @@ def collect(lat: float, lng: float, radius_km: float) -> tuple[list[dict], list[
             val = prices.get(field)
             if not isinstance(val, (int, float)):
                 continue
-            if val <= 0 or val > 500:  # cents; max ~€5/L
+            if val <= 0 or val > 500:  # cents; max ~500c/L (~€5/L)
                 continue
-            price_eur = val / 100.0
             observations.append({
                 "station_id": station_id,
                 "fuel_type": fuel_type,
-                "price": price_eur,
+                "price": val,  # stored in euro cents (e.g. 189.9)
                 "observed_at": observed_at,
             })
 

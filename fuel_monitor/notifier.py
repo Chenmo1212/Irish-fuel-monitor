@@ -83,17 +83,17 @@ def format_message(
 
     lines = ["⛽ Fuel Alert", ""]
     lines += ["Best station nearby:", f"{name} ({dist_str})", ""]
-    lines += [f"Current price:   €{price:.3f}/L"]
+    lines += [f"Current price:   {price:.1f}c/L"]
     if score is not None:
         lines += [f"Fuel Score:      {score:.0f}/100  ({score_label})"]
     if pct is not None:
         lines += [f"30d percentile:  {pct:.0f}%"]
     if avg_7d is not None:
-        lines += [f"7d average:      €{avg_7d:.3f}/L"]
+        lines += [f"7d average:      {avg_7d:.1f}c/L"]
     if avg_30d is not None:
-        lines += [f"30d average:     €{avg_30d:.3f}/L"]
+        lines += [f"30d average:     {avg_30d:.1f}c/L"]
     if low_30d is not None:
-        lines += [f"30d low:         €{low_30d:.3f}/L"]
+        lines += [f"30d low:         {low_30d:.1f}c/L"]
 
     if analysis.get("score_reasons"):
         lines += ["", "Why:"]
@@ -105,7 +105,7 @@ def format_message(
         for fc in forecasts:
             h = fc["horizon_days"]
             label = "Tomorrow" if h == 1 else f"{h} days"
-            lines += [f"  {label}:  €{fc['expected']:.3f}  (€{fc['low']:.3f}–€{fc['high']:.3f})"]
+            lines += [f"  {label}:  {fc['expected']:.1f}c  ({fc['low']:.1f}c–{fc['high']:.1f}c)"]
 
     if total_saving is not None:
         lines += ["", "Potential saving vs fill now:"]

@@ -112,7 +112,7 @@ def run_check_for_user(
             if last_sent.tzinfo is None:
                 last_sent = last_sent.replace(tzinfo=timezone.utc)
             hours_since = (datetime.now(timezone.utc) - last_sent).total_seconds() / 3600
-            price_improvement = (last_alert["price"] - st["current_price"]) * 100
+            price_improvement = last_alert["price"] - st["current_price"]  # both in cents
             if hours_since < cooldown_hours and price_improvement < sig_drop_cents:
                 logger.debug("User %s: cooldown active (%.1fh) — suppressed", chat_id, hours_since)
                 return False
