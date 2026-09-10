@@ -117,7 +117,8 @@ def run_check_for_user(
 
     forecasts = forecast(best["history"], horizons)
     recommendation = decide(st["current_price"], forecasts, typical_fill, sig_drop_cents)
-    title, body, maps_url = format_message(st, a, forecasts, recommendation, typical_fill)
+    alternatives = [item["station"] for item in station_results[1:4]]
+    title, body, maps_url = format_message(st, a, forecasts, recommendation, typical_fill, alternatives=alternatives)
 
     sent = send_telegram_to(chat_id, title, body, maps_url, token)
     if sent:

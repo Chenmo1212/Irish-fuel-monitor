@@ -50,6 +50,7 @@ def format_message(
     forecasts: list[dict] | None,
     recommendation: dict,
     typical_fill_litres: float,
+    alternatives: list[dict] | None = None,
 ) -> tuple[str, str, str | None]:
     """
     Format a Telegram-style notification message.
@@ -110,6 +111,13 @@ def format_message(
     if total_saving is not None:
         lines += ["", "Potential saving vs fill now:"]
         lines += [f"  ~€{total_saving:.2f} on {typical_fill_litres:.0f}L"]
+
+    if alternatives:
+        lines += ["", "Other options:"]
+        for option in alternatives[:3]:
+            lines.append(
+                f"  {option['name']} — {option['current_price']:.1f}c/L, {option['distance_km']:.1f} km"
+            )
 
     lines += ["", f"{emoji} {action}", reason]
 
