@@ -48,10 +48,23 @@ def decide(
             "predicted_total_saving": round(total_saving_eur, 2),
             "forecast_used": forecast_used,
         }
+    elif -saving_per_litre >= threshold:
+        avoided_cost_eur = (-saving_per_litre) / 100.0 * typical_fill_litres
+        return {
+            "action": "FILL NOW",
+            "reason": (
+                f"Price expected to rise by {-saving_per_litre:.1f}c/L "
+                f"in ~{forecast_used['horizon_days']} days — fill now to avoid "
+                f"~€{avoided_cost_eur:.2f} increase on {typical_fill_litres:.0f}L"
+            ),
+            "predicted_saving_per_litre": round(saving_per_litre, 4),
+            "predicted_total_saving": round(total_saving_eur, 2),
+            "forecast_used": forecast_used,
+        }
     else:
         return {
             "action": "FILL NOW",
-            "reason": "Predicted saving too small to justify waiting",
+            "reason": "Predicted change is small — good price now, fill up",
             "predicted_saving_per_litre": round(saving_per_litre, 4),
             "predicted_total_saving": round(total_saving_eur, 2),
             "forecast_used": forecast_used,

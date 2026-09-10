@@ -87,11 +87,9 @@ def run_check_for_user(
         return False
 
     station_results.sort(
-        key=lambda r: (
-            r["station"]["current_price"],
-            0 if r["analysis"].get("score") is not None else 1,
-            -(r["analysis"]["score"] or 0),
-            r["station"]["distance_km"],
+        key=lambda result: (
+            result["station"]["current_price"],
+            result["station"]["distance_km"],
         )
     )
     best = station_results[0]

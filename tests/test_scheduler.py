@@ -127,3 +127,33 @@ def test_run_check_no_stations_returns_false(db):
         )
     assert sent is False
     assert not mock_send.called
+
+
+def test_run_check_prefers_lowest_current_price_over_score(db):
+    user = _make_user()
+    stations = [
+        {"station_id": "cheap", "name": "Cheap Station", "brand": "A", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
+        {"station_id": "scored", "name": "High Score Station", "brand": "B", "address": "", "town": "", "county": "", "latitude": 53.30, "longitude": -6.20},
+    ]
+    observations = [
+        {"station_id": "cheap", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
+        {"station_id": "scored", "fuel_type": "E10", "price": 181.9, "observed_at": datetime.now(timezone.utc)},
+    ]
+    with patch("fuel_monitor.scheduler.collect", return_value=(stations, observations)), patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as send:
+        assert run_check_for_user(user, db, "tok", [1, 3, 7], 40.0, 1.0, 24.0, 0.0, False)
+    assert "Cheap Station" in send.call_args.args[1]
+
+
+def test_run_check_uses_distance_as_price_tiebreaker(db):
+    user = _make_user()
+    stations = [
+        {"station_id": "far", "name": "Far Station", "brand": "A", "address": "", "town": "", "county": "", "latitude": 53.40, "longitude": -6.19},
+        {"station_id": "near", "name": "Near Station", "brand": "B", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.20},
+    ]
+    observations = [
+        {"station_id": "far", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
+        {"station_id": "near", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
+    ]
+    with patch("fuel_monitor.scheduler.collect", return_value=(stations, observations)), patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as send:
+        assert run_check_for_user(user, db, "tok", [1, 3, 7], 40.0, 1.0, 24.0, 0.0, False)
+    assert "Near Station" in send.call_args.args[1]

@@ -63,3 +63,20 @@ def test_decide_falls_back_to_1day_if_no_3day_forecast():
     ]
     result = decide(175.0, forecasts, 40, 1.0)
     assert result["forecast_used"]["horizon_days"] == 1
+
+
+def test_decide_recommends_fill_now_when_forecast_rises():
+    result = decide(180.0, [{"horizon_days": 3, "expected": 183.0, "low": 181.0, "high": 185.0}], 40.0, 1.0)
+    assert result["action"] == "FILL NOW"
+    assert "rise" in result["reason"].lower() or "increase" in result["reason"].lower()
+
+
+def test_decide_recommends_wait_when_forecast_falls_meaningfully():
+    result = decide(180.0, [{"horizon_days": 3, "expected": 177.0, "low": 175.0, "high": 179.0}], 40.0, 1.0)
+    assert result["action"] == "WAIT"
+
+
+def test_decide_does_not_make_strong_timing_claim_for_small_change():
+    result = decide(180.0, [{"horizon_days": 3, "expected": 180.5, "low": 179.0, "high": 182.0}], 40.0, 1.0)
+    assert result["action"] == "FILL NOW"
+    assert "small" in result["reason"].lower() or "little" in result["reason"].lower()
