@@ -183,7 +183,7 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         user=user, db=db, token=token,
         horizons=sched.HORIZONS, typical_fill=sched.TYPICAL_FILL,
         sig_drop_cents=sched.SIG_DROP_CENTS, cooldown_hours=sched.COOLDOWN_HOURS,
-        min_score=sched.MIN_SCORE, bypass_cooldown=True,
+        min_score=sched.MIN_SCORE, bypass_cooldown=True, show_alternatives=True,
     )
     if not sent:
         await update.message.reply_text(
@@ -210,7 +210,7 @@ async def msg_location_check_now(update: Update, context: ContextTypes.DEFAULT_T
         user=fresh_user, db=db, token=token,
         horizons=sched.HORIZONS, typical_fill=sched.TYPICAL_FILL,
         sig_drop_cents=sched.SIG_DROP_CENTS, cooldown_hours=sched.COOLDOWN_HOURS,
-        min_score=sched.MIN_SCORE, bypass_cooldown=True,
+        min_score=sched.MIN_SCORE, bypass_cooldown=True, show_alternatives=True,
     )
     if not sent:
         await update.message.reply_text(

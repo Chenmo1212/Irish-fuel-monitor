@@ -183,13 +183,40 @@ def test_run_check_passes_three_alternatives(db):
             user=user, db=db, token="tok",
             horizons=[1, 3, 7], typical_fill=40.0,
             sig_drop_cents=1.0, cooldown_hours=24.0,
-            min_score=0.0, bypass_cooldown=True,
+            min_score=0.0, bypass_cooldown=True, show_alternatives=True,
         )
 
     assert sent is True
-    assert "alternatives" in mock_fmt.call_args.kwargs
     alts = mock_fmt.call_args.kwargs["alternatives"]
     assert len(alts) == 3
     assert alts[0]["name"] == "Second"
     assert alts[1]["name"] == "Third"
     assert alts[2]["name"] == "Fourth"
+
+
+def test_run_check_scheduled_no_alternatives(db):
+    """Scheduled calls (show_alternatives=False default) pass alternatives=None to format_message."""
+    user = _make_user()
+    stations = [
+        {"station_id": "s1", "name": "Cheapest", "brand": "A", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
+        {"station_id": "s2", "name": "Second",   "brand": "B", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
+    ]
+    observations = [
+        {"station_id": "s1", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
+        {"station_id": "s2", "fuel_type": "E10", "price": 180.4, "observed_at": datetime.now(timezone.utc)},
+    ]
+
+    with (
+        patch("fuel_monitor.scheduler.collect", return_value=(stations, observations)),
+        patch("fuel_monitor.scheduler.send_telegram_to", return_value=True),
+        patch("fuel_monitor.scheduler.format_message", wraps=__import__("fuel_monitor.notifier", fromlist=["format_message"]).format_message) as mock_fmt,
+    ):
+        sent = run_check_for_user(
+            user=user, db=db, token="tok",
+            horizons=[1, 3, 7], typical_fill=40.0,
+            sig_drop_cents=1.0, cooldown_hours=24.0,
+            min_score=0.0, bypass_cooldown=True,
+        )
+
+    assert sent is True
+    assert mock_fmt.call_args.kwargs["alternatives"] is None

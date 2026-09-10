@@ -87,3 +87,14 @@ def test_format_message_no_other_options_when_alternatives_empty():
         alternatives=[],
     )
     assert "Other options" not in body
+
+
+def test_format_message_no_other_options_when_alternatives_none():
+    title, body, maps_url = format_message(
+        station={"name": "Best", "distance_km": 1.0, "current_price": 179.9, "latitude": 53.3, "longitude": -6.2},
+        analysis={"current_price": 179.9, "score": None},
+        forecasts=None,
+        recommendation={"action": "FILL NOW", "reason": "Lowest current price"},
+        typical_fill_litres=40.0,
+    )
+    assert "Other options" not in body

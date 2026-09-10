@@ -36,6 +36,7 @@ def run_check_for_user(
     cooldown_hours: float,
     min_score: float,
     bypass_cooldown: bool,
+    show_alternatives: bool = False,
 ) -> bool:
     """
     Run the full fuel-check pipeline for a single user.
@@ -117,7 +118,7 @@ def run_check_for_user(
 
     forecasts = forecast(best["history"], horizons)
     recommendation = decide(st["current_price"], forecasts, typical_fill, sig_drop_cents)
-    alternatives = [item["station"] for item in station_results[1:4]]
+    alternatives = [item["station"] for item in station_results[1:4]] if show_alternatives else None
     title, body, maps_url = format_message(st, a, forecasts, recommendation, typical_fill, alternatives=alternatives)
 
     sent = send_telegram_to(chat_id, title, body, maps_url, token)
