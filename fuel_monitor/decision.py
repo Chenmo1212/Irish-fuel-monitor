@@ -15,7 +15,10 @@ def decide(
 
     Returns:
         dict with action, reason, predicted_saving_per_litre,
-        predicted_total_saving, forecast_used
+        predicted_total_saving, forecast_used.
+        predicted_saving_per_litre and predicted_total_saving are signed as
+        (current_price - expected), where positive indicates a predicted drop
+        (savings by waiting) and negative indicates a predicted rise.
     """
     threshold = significant_price_drop_cents  # already in cents
 

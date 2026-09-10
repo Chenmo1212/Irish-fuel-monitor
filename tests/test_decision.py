@@ -69,6 +69,9 @@ def test_decide_recommends_fill_now_when_forecast_rises():
     result = decide(180.0, [{"horizon_days": 3, "expected": 183.0, "low": 181.0, "high": 185.0}], 40.0, 1.0)
     assert result["action"] == "FILL NOW"
     assert "rise" in result["reason"].lower() or "increase" in result["reason"].lower()
+    # predicted_saving_per_litre and predicted_total_saving are signed (current - expected) -> negative on rise
+    assert result["predicted_saving_per_litre"] == -3.0
+    assert result["predicted_total_saving"] == -1.20
 
 
 def test_decide_recommends_wait_when_forecast_falls_meaningfully():
