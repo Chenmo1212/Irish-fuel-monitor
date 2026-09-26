@@ -1,7 +1,7 @@
 import pytest
 import tempfile
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from fuel_monitor.database import Database
 from fuel_monitor.scheduler import run_check_for_user
@@ -28,6 +28,10 @@ def _make_user(fuel_type="E10", lat=53.3, lng=-6.2):
     }
 
 
+def _now():
+    return datetime.now(timezone.utc)
+
+
 def _fake_collect(lat, lng, radius_km):
     station = {
         "station_id": "s1",
@@ -39,7 +43,8 @@ def _fake_collect(lat, lng, radius_km):
         "latitude": lat + 0.01,
         "longitude": lng + 0.01,
     }
-    obs = [{"station_id": "s1", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)}]
+    obs = [{"station_id": "s1", "fuel_type": "E10", "price": 179.9,
+            "observed_at": _now(), "price_reported_at": _now()}]
     return [station], obs
 
 
@@ -136,8 +141,8 @@ def test_run_check_prefers_lowest_current_price_over_score(db):
         {"station_id": "scored", "name": "High Score Station", "brand": "B", "address": "", "town": "", "county": "", "latitude": 53.30, "longitude": -6.20},
     ]
     observations = [
-        {"station_id": "cheap", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
-        {"station_id": "scored", "fuel_type": "E10", "price": 181.9, "observed_at": datetime.now(timezone.utc)},
+        {"station_id": "cheap", "fuel_type": "E10", "price": 179.9, "observed_at": _now(), "price_reported_at": _now()},
+        {"station_id": "scored", "fuel_type": "E10", "price": 181.9, "observed_at": _now(), "price_reported_at": _now()},
     ]
     with patch("fuel_monitor.scheduler.collect", return_value=(stations, observations)), patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as send:
         assert run_check_for_user(user, db, "tok", [1, 3, 7], 40.0, 1.0, 24.0, 0.0, False)
@@ -151,8 +156,8 @@ def test_run_check_uses_distance_as_price_tiebreaker(db):
         {"station_id": "near", "name": "Near Station", "brand": "B", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.20},
     ]
     observations = [
-        {"station_id": "far", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
-        {"station_id": "near", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
+        {"station_id": "far", "fuel_type": "E10", "price": 179.9, "observed_at": _now(), "price_reported_at": _now()},
+        {"station_id": "near", "fuel_type": "E10", "price": 179.9, "observed_at": _now(), "price_reported_at": _now()},
     ]
     with patch("fuel_monitor.scheduler.collect", return_value=(stations, observations)), patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as send:
         assert run_check_for_user(user, db, "tok", [1, 3, 7], 40.0, 1.0, 24.0, 0.0, False)
@@ -168,10 +173,10 @@ def test_run_check_passes_three_alternatives(db):
         {"station_id": "s4", "name": "Fourth",   "brand": "D", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
     ]
     observations = [
-        {"station_id": "s1", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
-        {"station_id": "s2", "fuel_type": "E10", "price": 180.4, "observed_at": datetime.now(timezone.utc)},
-        {"station_id": "s3", "fuel_type": "E10", "price": 180.8, "observed_at": datetime.now(timezone.utc)},
-        {"station_id": "s4", "fuel_type": "E10", "price": 181.2, "observed_at": datetime.now(timezone.utc)},
+        {"station_id": "s1", "fuel_type": "E10", "price": 179.9, "observed_at": _now(), "price_reported_at": _now()},
+        {"station_id": "s2", "fuel_type": "E10", "price": 180.4, "observed_at": _now(), "price_reported_at": _now()},
+        {"station_id": "s3", "fuel_type": "E10", "price": 180.8, "observed_at": _now(), "price_reported_at": _now()},
+        {"station_id": "s4", "fuel_type": "E10", "price": 181.2, "observed_at": _now(), "price_reported_at": _now()},
     ]
 
     with (
@@ -202,8 +207,8 @@ def test_run_check_scheduled_no_alternatives(db):
         {"station_id": "s2", "name": "Second",   "brand": "B", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
     ]
     observations = [
-        {"station_id": "s1", "fuel_type": "E10", "price": 179.9, "observed_at": datetime.now(timezone.utc)},
-        {"station_id": "s2", "fuel_type": "E10", "price": 180.4, "observed_at": datetime.now(timezone.utc)},
+        {"station_id": "s1", "fuel_type": "E10", "price": 179.9, "observed_at": _now(), "price_reported_at": _now()},
+        {"station_id": "s2", "fuel_type": "E10", "price": 180.4, "observed_at": _now(), "price_reported_at": _now()},
     ]
 
     with (
@@ -302,3 +307,81 @@ def test_automatic_alert_sent_for_negligible_forecast_change(db):
         )
     assert sent is True
     assert mock_send.called
+
+
+def test_stale_price_station_excluded_from_recommendations(db):
+    """Stations with price_reported_at older than MAX_PRICE_AGE_DAYS are not recommended."""
+    user = _make_user()
+    stale_ts = _now() - timedelta(days=10)  # well beyond the 3-day threshold
+    stations = [
+        {"station_id": "stale", "name": "Stale Station", "brand": "A", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
+    ]
+    observations = [
+        {"station_id": "stale", "fuel_type": "E10", "price": 150.0,
+         "observed_at": _now(), "price_reported_at": stale_ts},
+    ]
+    with (
+        patch("fuel_monitor.scheduler.collect", return_value=(stations, observations)),
+        patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as mock_send,
+    ):
+        sent = run_check_for_user(
+            user=user, db=db, token="tok",
+            horizons=[1, 3, 7], typical_fill=40.0,
+            sig_drop_cents=1.0, cooldown_hours=24.0,
+            min_score=0.0, bypass_cooldown=True,
+        )
+    # Even though this looks like the cheapest station, it must be excluded
+    assert sent is False
+    assert not mock_send.called
+
+
+def test_missing_price_reported_at_station_excluded(db):
+    """Stations with no price_reported_at (None) are excluded — we can't verify freshness."""
+    user = _make_user()
+    stations = [
+        {"station_id": "notime", "name": "No Timestamp Station", "brand": "A", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
+    ]
+    observations = [
+        {"station_id": "notime", "fuel_type": "E10", "price": 150.0,
+         "observed_at": _now(), "price_reported_at": None},
+    ]
+    with (
+        patch("fuel_monitor.scheduler.collect", return_value=(stations, observations)),
+        patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as mock_send,
+    ):
+        sent = run_check_for_user(
+            user=user, db=db, token="tok",
+            horizons=[1, 3, 7], typical_fill=40.0,
+            sig_drop_cents=1.0, cooldown_hours=24.0,
+            min_score=0.0, bypass_cooldown=True,
+        )
+    assert sent is False
+    assert not mock_send.called
+
+
+def test_fresh_station_beats_stale_station(db):
+    """A fresh station is recommended even when a stale station has a lower price."""
+    user = _make_user()
+    stale_ts = _now() - timedelta(days=10)
+    stations = [
+        {"station_id": "stale", "name": "Stale Cheap", "brand": "A", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
+        {"station_id": "fresh", "name": "Fresh Station", "brand": "B", "address": "", "town": "", "county": "", "latitude": 53.31, "longitude": -6.19},
+    ]
+    observations = [
+        {"station_id": "stale", "fuel_type": "E10", "price": 150.0,
+         "observed_at": _now(), "price_reported_at": stale_ts},
+        {"station_id": "fresh", "fuel_type": "E10", "price": 179.9,
+         "observed_at": _now(), "price_reported_at": _now()},
+    ]
+    with (
+        patch("fuel_monitor.scheduler.collect", return_value=(stations, observations)),
+        patch("fuel_monitor.scheduler.send_telegram_to", return_value=True) as mock_send,
+    ):
+        sent = run_check_for_user(
+            user=user, db=db, token="tok",
+            horizons=[1, 3, 7], typical_fill=40.0,
+            sig_drop_cents=1.0, cooldown_hours=24.0,
+            min_score=0.0, bypass_cooldown=True,
+        )
+    assert sent is True
+    assert "Fresh Station" in mock_send.call_args.args[1]

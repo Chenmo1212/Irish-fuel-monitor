@@ -15,6 +15,9 @@ TYPICAL_FILL = 40.0
 SIG_DROP_CENTS = 1.0
 COOLDOWN_HOURS = 24.0
 MIN_SCORE = 0.0
+# Stations whose API-reported price is older than this are excluded from
+# recommendations — the price is likely stale and cannot be trusted.
+MAX_PRICE_AGE_DAYS = 3
 
 FUEL_CODE_MAP = {
     "petrol":     "E10",
@@ -67,13 +70,27 @@ def run_check_for_user(
     since_30d = datetime.now(timezone.utc) - timedelta(days=30)
     obs_by_station = {o["station_id"]: o["price"] for o in fuel_obs}
 
+    now = datetime.now(timezone.utc)
+    price_age_cutoff = now - timedelta(days=MAX_PRICE_AGE_DAYS)
+    obs_reported_at = {o["station_id"]: o.get("price_reported_at") for o in fuel_obs}
+
     station_results = []
     for s in stations:
         sid = s["station_id"]
         current_price = obs_by_station.get(sid)
         if current_price is None:
             continue
-        db.save_observation(sid, fuel_type, current_price, datetime.now(timezone.utc))
+
+        # Filter: skip stations with no API timestamp or a stale one.
+        price_reported_at = obs_reported_at.get(sid)
+        if price_reported_at is None or price_reported_at < price_age_cutoff:
+            logger.debug(
+                "Station %s skipped — price_reported_at %s is older than %d days",
+                sid, price_reported_at, MAX_PRICE_AGE_DAYS,
+            )
+            continue
+
+        db.save_observation(sid, fuel_type, current_price, now, price_reported_at)
         distance_km = haversine_km(lat, lng, s["latitude"], s["longitude"])
         history = db.get_price_history(sid, fuel_type, since_30d)
         result = analyse(current_price, history)

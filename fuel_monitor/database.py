@@ -33,13 +33,21 @@ class Database:
             """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS price_history (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    station_id  TEXT NOT NULL REFERENCES stations(station_id),
-                    fuel_type   TEXT NOT NULL,
-                    price       REAL NOT NULL,
-                    observed_at TEXT NOT NULL
+                    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                    station_id        TEXT NOT NULL REFERENCES stations(station_id),
+                    fuel_type         TEXT NOT NULL,
+                    price             REAL NOT NULL,
+                    observed_at       TEXT NOT NULL,
+                    price_reported_at TEXT
                 )
             """)
+            # Migration: add column to existing databases that predate this field.
+            # SQLite does not support IF NOT EXISTS on ALTER TABLE, so we catch the
+            # OperationalError that fires when the column already exists.
+            try:
+                conn.execute("ALTER TABLE price_history ADD COLUMN price_reported_at TEXT")
+            except Exception:
+                pass  # column already present — nothing to do
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_price_history_station_fuel
                     ON price_history(station_id, fuel_type, observed_at)
@@ -61,21 +69,54 @@ class Database:
                 VALUES (:station_id, :name, :brand, :address, :town, :county, :latitude, :longitude)
             """, station)
 
-    def save_observation(self, station_id: str, fuel_type: str, price: float, observed_at: datetime) -> bool:
-        cutoff = (observed_at - timedelta(minutes=60)).isoformat()
+    def save_observation(
+        self,
+        station_id: str,
+        fuel_type: str,
+        price: float,
+        observed_at: datetime,
+        price_reported_at: datetime | None = None,
+    ) -> bool:
+        """Save a price observation only if the price has changed since the last recorded value.
+
+        Skips the write when the most recent stored price for this station+fuel
+        already equals the incoming price — this prevents repeated identical
+        entries from inflating the historical record and biasing the score.
+        """
         with self._connect() as conn:
-            existing = conn.execute("""
-                SELECT 1 FROM price_history
-                WHERE station_id=? AND fuel_type=? AND ABS(price - ?) < 0.0001 AND observed_at > ?
+            last = conn.execute("""
+                SELECT price FROM price_history
+                WHERE station_id=? AND fuel_type=?
+                ORDER BY observed_at DESC
                 LIMIT 1
-            """, (station_id, fuel_type, price, cutoff)).fetchone()
-            if existing:
+            """, (station_id, fuel_type)).fetchone()
+            if last is not None and abs(last["price"] - price) < 0.0001:
                 return False
             conn.execute("""
-                INSERT INTO price_history (station_id, fuel_type, price, observed_at)
-                VALUES (?, ?, ?, ?)
-            """, (station_id, fuel_type, price, observed_at.isoformat()))
+                INSERT INTO price_history (station_id, fuel_type, price, observed_at, price_reported_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                station_id, fuel_type, price,
+                observed_at.isoformat(),
+                price_reported_at.isoformat() if price_reported_at else None,
+            ))
             return True
+
+    def get_latest_price_reported_at(self, station_id: str, fuel_type: str) -> datetime | None:
+        """Return the most recent price_reported_at for this station+fuel, or None."""
+        with self._connect() as conn:
+            row = conn.execute("""
+                SELECT price_reported_at FROM price_history
+                WHERE station_id=? AND fuel_type=? AND price_reported_at IS NOT NULL
+                ORDER BY observed_at DESC
+                LIMIT 1
+            """, (station_id, fuel_type)).fetchone()
+            if row is None:
+                return None
+            dt = datetime.fromisoformat(row["price_reported_at"])
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
 
     def get_price_history(self, station_id: str, fuel_type: str, since: datetime) -> list[dict]:
         with self._connect() as conn:

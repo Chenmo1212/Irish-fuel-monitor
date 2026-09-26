@@ -40,14 +40,17 @@ def test_save_observation_new(db):
     saved = db.save_observation("ie-001", "E10", 1.799, now)
     assert saved is True
 
-def test_save_observation_dedup_same_price_within_60min(db):
+def test_save_observation_dedup_same_price_skipped(db):
+    """Same price as the most recent stored value is never written again, regardless of time elapsed."""
     db.upsert_station({"station_id": "ie-001", "name": "Test", "brand": None,
                        "address": "", "town": "", "county": "",
                        "latitude": 53.0, "longitude": -6.0})
     now = datetime.now(timezone.utc)
     db.save_observation("ie-001", "E10", 1.799, now)
-    saved_again = db.save_observation("ie-001", "E10", 1.799, now + timedelta(minutes=30))
-    assert saved_again is False
+    # Same price 30 minutes later → skipped
+    assert db.save_observation("ie-001", "E10", 1.799, now + timedelta(minutes=30)) is False
+    # Same price 3 days later → still skipped (prevents stale-data inflation)
+    assert db.save_observation("ie-001", "E10", 1.799, now + timedelta(days=3)) is False
 
 def test_save_observation_different_price_always_saved(db):
     db.upsert_station({"station_id": "ie-001", "name": "Test", "brand": None,
@@ -58,14 +61,16 @@ def test_save_observation_different_price_always_saved(db):
     saved = db.save_observation("ie-001", "E10", 1.789, now + timedelta(minutes=30))
     assert saved is True
 
-def test_save_observation_dedup_boundary_at_60min(db):
+def test_save_observation_price_change_then_revert(db):
+    """Price reverts to an old value — must be recorded as a genuine change."""
     db.upsert_station({"station_id": "ie-001", "name": "Test", "brand": None,
                        "address": "", "town": "", "county": "",
                        "latitude": 53.0, "longitude": -6.0})
     now = datetime.now(timezone.utc)
     db.save_observation("ie-001", "E10", 1.799, now)
-    # Exactly 60 minutes later is outside the 60-min window — must be saved
-    saved = db.save_observation("ie-001", "E10", 1.799, now + timedelta(minutes=60))
+    db.save_observation("ie-001", "E10", 1.819, now + timedelta(days=1))
+    # Price drops back to original — different from latest (1.819) so must save
+    saved = db.save_observation("ie-001", "E10", 1.799, now + timedelta(days=2))
     assert saved is True
 
 def test_upsert_station_updates_on_conflict(db):

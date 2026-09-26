@@ -92,6 +92,15 @@ def collect(lat: float, lng: float, radius_km: float) -> tuple[list[dict], list[
             })
 
         prices = s.get("prices") or {}
+
+        # API reports when the price was last submitted by the station.
+        # Prefer date_updated (a subsequent edit) over date_added (first submission).
+        raw_ts = prices.get("date_updated") or prices.get("date_added")
+        try:
+            price_reported_at = datetime.fromisoformat(raw_ts.replace("Z", "+00:00")) if raw_ts else None
+        except (ValueError, AttributeError):
+            price_reported_at = None
+
         for field, fuel_type in FUEL_FIELD_MAP:
             val = prices.get(field)
             if not isinstance(val, (int, float)):
@@ -103,6 +112,7 @@ def collect(lat: float, lng: float, radius_km: float) -> tuple[list[dict], list[
                 "fuel_type": fuel_type,
                 "price": val,  # stored in euro cents (e.g. 189.9)
                 "observed_at": observed_at,
+                "price_reported_at": price_reported_at,
             })
 
     logger.info("Collected %d stations, %d price observations", len(stations), len(observations))
