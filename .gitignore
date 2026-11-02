@@ -1,5 +1,9 @@
 .env
 data/*.db
+data/*.db.bak
+data/*.db.importing
+data/*.db.local-backup
+data/fly-backup/
 __pycache__/
 *.pyc
 *.pyo
