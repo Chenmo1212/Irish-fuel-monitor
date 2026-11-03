@@ -7,16 +7,21 @@ logger = logging.getLogger(__name__)
 
 def _build_telegram_payload(chat_id: str, title: str, body: str, maps_url: str | None) -> dict:
     text = f"*{title}*\n\n{body}"
-    payload: dict = {
+    keyboard: list[list[dict]] = []
+    if maps_url:
+        keyboard.append([{"text": "📍 Navigate", "url": maps_url}])
+    # callback_data values are handled by cb_action in bot_handlers.py
+    keyboard.append([
+        {"text": "🔄 Check", "callback_data": "act:check"},
+        {"text": "📍 Check here", "callback_data": "act:check_now"},
+        {"text": "⛽ Fuel", "callback_data": "act:fuel"},
+    ])
+    return {
         "chat_id": chat_id,
         "text": text,
         "parse_mode": "Markdown",
+        "reply_markup": {"inline_keyboard": keyboard},
     }
-    if maps_url:
-        payload["reply_markup"] = {
-            "inline_keyboard": [[{"text": "📍 Navigate", "url": maps_url}]]
-        }
-    return payload
 
 
 def send_telegram_to(

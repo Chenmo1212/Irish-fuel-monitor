@@ -57,6 +57,22 @@ def test_send_telegram_to_with_maps_url():
     assert "reply_markup" in payload
 
 
+def test_send_telegram_to_includes_quick_action_buttons():
+    with patch("fuel_monitor.notifier.requests.post", return_value=_mock_ok()) as mock_post:
+        send_telegram_to("12345", "Test", "Hello", "https://maps.google.com/?q=1,2", "fake-token")
+    rows = mock_post.call_args[1]["json"]["reply_markup"]["inline_keyboard"]
+    assert rows[0] == [{"text": "📍 Navigate", "url": "https://maps.google.com/?q=1,2"}]
+    assert [b["callback_data"] for b in rows[1]] == ["act:check", "act:check_now", "act:fuel"]
+
+
+def test_send_telegram_to_quick_actions_without_maps_url():
+    with patch("fuel_monitor.notifier.requests.post", return_value=_mock_ok()) as mock_post:
+        send_telegram_to("12345", "Test", "Hello", None, "fake-token")
+    rows = mock_post.call_args[1]["json"]["reply_markup"]["inline_keyboard"]
+    assert len(rows) == 1
+    assert all("callback_data" in b for b in rows[0])
+
+
 def test_format_message_includes_at_most_three_other_options():
     title, body, maps_url = format_message(
         station={"name": "Best", "distance_km": 1.0, "current_price": 179.9, "latitude": 53.3, "longitude": -6.2},

@@ -140,7 +140,7 @@ async def cmd_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     chat_id = str(update.effective_chat.id)
     db.touch_user(chat_id)
     # Do NOT set want_location — fuel-only update, no location re-prompt
-    await update.message.reply_text("Choose your fuel type:", reply_markup=_fuel_keyboard())
+    await update.effective_message.reply_text("Choose your fuel type:", reply_markup=_fuel_keyboard())
     return CHOOSING_FUEL
 
 
@@ -159,7 +159,7 @@ async def cmd_check_now(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     db: Database = context.bot_data["db"]
     chat_id = str(update.effective_chat.id)
     db.touch_user(chat_id)
-    await update.message.reply_text(
+    await update.effective_message.reply_text(
         "Share your location for a fresh check 👇",
         reply_markup=_location_keyboard(),
     )
@@ -178,15 +178,15 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     user = db.get_user(chat_id)
     if not user or user.get("latitude") is None:
-        await update.message.reply_text(
+        await update.effective_message.reply_text(
             "No saved location. Use /start to set one, or /check_now to share fresh."
         )
         return ConversationHandler.END
     if not user.get("fuel_type"):
-        await update.message.reply_text("No fuel type set. Use /start to configure.")
+        await update.effective_message.reply_text("No fuel type set. Use /start to configure.")
         return ConversationHandler.END
 
-    await update.message.reply_text("🔍 Checking prices near you…")
+    await update.effective_message.reply_text("🔍 Checking prices near you…")
     sent = await asyncio.to_thread(
         sched.run_check_for_user,
         user=user, db=db, token=token,
@@ -195,9 +195,23 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         min_score=sched.MIN_SCORE, bypass_cooldown=True, show_alternatives=True,
     )
     if not sent:
-        await update.message.reply_text(
+        await update.effective_message.reply_text(
             "😕 No results — either no stations found nearby or not enough price history yet."
         )
+    return ConversationHandler.END
+
+
+async def cb_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handles the quick-action buttons under an alert message (callback_data 'act:*')."""
+    query = update.callback_query
+    await query.answer()
+    action = query.data.split(":")[1]
+    if action == "check":
+        return await cmd_check(update, context)
+    if action == "check_now":
+        return await cmd_check_now(update, context)
+    if action == "fuel":
+        return await cmd_fuel(update, context)
     return ConversationHandler.END
 
 
@@ -315,6 +329,7 @@ def build_application(db: Database, token: str, admin_chat_id: str) -> Applicati
             CommandHandler("location", cmd_location),
             CommandHandler("check", cmd_check),
             CommandHandler(["check_now", "checknow"], cmd_check_now),
+            CallbackQueryHandler(cb_action, pattern=r"^act:"),
         ],
         states={
             CHOOSING_FUEL: [CallbackQueryHandler(cb_fuel_chosen, pattern=r"^fuel:")],
@@ -324,6 +339,7 @@ def build_application(db: Database, token: str, admin_chat_id: str) -> Applicati
         fallbacks=[
             CommandHandler("start", cmd_start),
             CommandHandler(["check_now", "checknow"], cmd_check_now),
+            CallbackQueryHandler(cb_action, pattern=r"^act:"),
         ],
         per_message=False,
     )
