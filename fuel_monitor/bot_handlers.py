@@ -60,7 +60,9 @@ def _location_keyboard() -> ReplyKeyboardMarkup:
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     db: Database = context.bot_data["db"]
     chat_id = str(update.effective_chat.id)
-    db.upsert_user(chat_id, None, None, None)
+    user = db.get_user(chat_id)
+    if not user:
+        db.upsert_user(chat_id, None, None, None)
     db.touch_user(chat_id)
     # Flag that after fuel selection we also need a location
     context.user_data["want_location"] = True
@@ -153,6 +155,17 @@ async def cmd_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return WAITING_LOCATION
 
 
+async def cmd_check_now(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    db: Database = context.bot_data["db"]
+    chat_id = str(update.effective_chat.id)
+    db.touch_user(chat_id)
+    await update.message.reply_text(
+        "Share your location for a fresh check 👇",
+        reply_markup=_location_keyboard(),
+    )
+    return WAITING_LOCATION_CHECK_NOW
+
+
 async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     db: Database = context.bot_data["db"]
     token: str = context.bot_data["token"]
@@ -161,16 +174,12 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     args = context.args or []
     if args and args[0].lower() == "now":
-        await update.message.reply_text(
-            "Share your location for a fresh check 👇",
-            reply_markup=_location_keyboard(),
-        )
-        return WAITING_LOCATION_CHECK_NOW
+        return await cmd_check_now(update, context)
 
     user = db.get_user(chat_id)
     if not user or user.get("latitude") is None:
         await update.message.reply_text(
-            "No saved location. Use /start to set one, or /check now to share fresh."
+            "No saved location. Use /start to set one, or /check_now to share fresh."
         )
         return ConversationHandler.END
     if not user.get("fuel_type"):
@@ -238,16 +247,27 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "⛽ *FuelBot commands*\n\n"
+        "⛽ FuelBot commands\n\n"
         "/start – Register or reset your preferences\n"
         "/fuel – Change your fuel type\n"
         "/location – Update your saved location\n"
         "/check – Best nearby price now (saved location)\n"
-        "/check now – Share fresh location, then check\n"
+        "/check_now – Share fresh location, then check\n"
         "/status – View your current settings\n"
-        "/stop – Unregister and stop alerts",
-        parse_mode="Markdown",
+        "/stop – Unregister and stop alerts\n"
+        "/help – Show command reference"
     )
+
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Exception while handling an update:", exc_info=context.error)
+    if isinstance(update, Update) and update.effective_message:
+        try:
+            await update.effective_message.reply_text(
+                "⚠️ An error occurred while processing your request. Please try again."
+            )
+        except Exception:
+            pass
 
 
 async def cmd_stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -294,13 +314,17 @@ def build_application(db: Database, token: str, admin_chat_id: str) -> Applicati
             CommandHandler("fuel", cmd_fuel),
             CommandHandler("location", cmd_location),
             CommandHandler("check", cmd_check),
+            CommandHandler(["check_now", "checknow"], cmd_check_now),
         ],
         states={
             CHOOSING_FUEL: [CallbackQueryHandler(cb_fuel_chosen, pattern=r"^fuel:")],
             WAITING_LOCATION: [MessageHandler(filters.LOCATION, msg_location_received)],
             WAITING_LOCATION_CHECK_NOW: [MessageHandler(filters.LOCATION, msg_location_check_now)],
         },
-        fallbacks=[CommandHandler("start", cmd_start)],
+        fallbacks=[
+            CommandHandler("start", cmd_start),
+            CommandHandler(["check_now", "checknow"], cmd_check_now),
+        ],
         per_message=False,
     )
 
@@ -309,5 +333,6 @@ def build_application(db: Database, token: str, admin_chat_id: str) -> Applicati
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("stop", cmd_stop))
     app.add_handler(CommandHandler("admin", cmd_admin))
+    app.add_error_handler(error_handler)
 
     return app

@@ -1,0 +1,11 @@
+{
+  "name": "fuel-monitor",
+  "version": "1.0.0",
+  "description": "Ireland Fuel Price Monitor Bot",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "deploy": "node build.js --deploy",
+    "deploy:db": "node build.js --upload-db"
+  }
+}

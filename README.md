@@ -88,7 +88,7 @@ Open Telegram, find your bot, and send `/start` to register.
 | `/fuel` | Change your fuel type |
 | `/location` | Update your saved location |
 | `/check` | Query best nearby price (uses saved location) |
-| `/check now` | Share fresh location, then query |
+| `/check_now` | Share fresh location, then query (or `/check now`) |
 | `/status` | View your current settings |
 | `/stop` | Unregister and stop alerts |
 | `/help` | Show command reference |

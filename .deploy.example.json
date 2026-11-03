@@ -1,0 +1,8 @@
+{
+  "host": "43.157.53.163",
+  "user": "root",
+  "target": "/www/wwwroot/api.chenmo1212.cn/fuel_monitor",
+  "key": "~/.ssh/tencent_frankfurt.pem",
+  "port": 22,
+  "restartCommand": "cd /www/wwwroot/api.chenmo1212.cn/fuel_monitor && .venv/bin/pip install -r requirements.txt && systemctl restart fuelbot"
+}
